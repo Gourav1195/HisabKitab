@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { initDB } from './src/db';
-import BottomTabs from './src/navigation/BottomTabs';
+import  RootStack  from './src/navigation/RootStack';
 
 const App = () => {
   useEffect(() => {
@@ -12,7 +12,7 @@ const App = () => {
   return (
     <View style={styles.container}>
       <NavigationContainer>
-        <BottomTabs />
+         <RootStack />
       </NavigationContainer>
     </View>
   );

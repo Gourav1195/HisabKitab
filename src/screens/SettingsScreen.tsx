@@ -1,29 +1,75 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 
-const SettingsScreen = () => {
+const SettingsScreen = ({ navigation }: any) => {
   return (
     <View style={styles.container}>
-      <Text style={styles.text}>Settings</Text>
-      <Text style={styles.sub}>Backup, restore, etc. later.</Text>
+      <Text style={styles.header}>Settings</Text>
+
+      <TouchableOpacity
+        style={styles.row}
+        onPress={() => navigation.navigate('DataSettings')}
+      >
+        <Text style={styles.title}>Data & Backup</Text>
+        <Text style={styles.sub}>Export, backup, restore</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.row}
+        onPress={() => navigation.navigate('AppInfo')}
+      >
+        <Text style={styles.title}>App Info</Text>
+        <Text style={styles.sub}>Version, about</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.row}
+        onPress={() => navigation.navigate('DangerZone')}
+      >
+        <Text style={[styles.title, styles.danger]}>
+          {/* Danger Zone */}
+          Archive Data
+        </Text>
+        <Text style={styles.sub}>Clear all data</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={styles.row}
+        onPress={() => navigation.navigate('ArchivedItems')}
+      >
+        <Text style={styles.title}>Archived Items</Text>
+        <Text style={styles.sub}>Restore hidden items</Text>
+      </TouchableOpacity>
+
     </View>
   );
 };
 
+export default SettingsScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    padding: 16,
   },
-  text: {
-    fontSize: 20,
+  header: {
+    fontSize: 22,
     fontWeight: '600',
+    marginBottom: 20,
+  },
+  row: {
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderColor: '#eee',
+  },
+  title: {
+    fontSize: 16,
+    fontWeight: '500',
   },
   sub: {
-    marginTop: 8,
+    fontSize: 13,
     color: '#666',
+    marginTop: 4,
+  },
+  danger: {
+    color: '#d9534f',
   },
 });
-
-export default SettingsScreen;

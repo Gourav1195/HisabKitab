@@ -1,4 +1,4 @@
-import React, {  useCallback, useState } from 'react';
+import React, {  useCallback, useLayoutEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -8,29 +8,38 @@ import {
   TouchableOpacity, 
 
 } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
-
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { 
   // addItem,
    getAllItems } from '../repo/inventoryRepo';
 import { Item } from '../types/inventory';
 
+const SettingsButton = () => {
+  const navigation = useNavigation<any>();
+
+  return (
+    <TouchableOpacity
+      onPress={() => navigation.navigate('Settings')}
+      style={{ marginRight: 12 }}
+    >
+      <Text style={{ fontSize: 18 }}>⚙️</Text>
+    </TouchableOpacity>
+  );
+};
 const InventoryListScreen = ({ navigation }: any) => {
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
-
+  
   useFocusEffect(
     useCallback(() => {
       loadItems();
     }, [])
   );
-
-// useEffect(() => {
-//   addItem('New Item');
-//   const data = getAllItems();
-//   setItems(data);
-//   setLoading(false);
-// }, []);
+useLayoutEffect(() => {
+  navigation.setOptions({
+    headerRight: SettingsButton,
+  });
+}, [navigation]);
 
   const loadItems = () => {
     try {
@@ -39,6 +48,7 @@ const InventoryListScreen = ({ navigation }: any) => {
       setLoading(false);
     } catch (err) {
       console.error('Failed to load items', err);
+      setItems([]);
       setLoading(false);
     } finally {
       setLoading(false);
@@ -59,27 +69,44 @@ const InventoryListScreen = ({ navigation }: any) => {
 
       <Text style={styles.header}>Inventory</Text>
 
-      {items.length === 0 ? (
-        <Text style={styles.empty}>No items yet</Text>
-      ) : (
-        <FlatList
-          data={items}
-          keyExtractor={(item) => item.id.toString()}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              onPress={() =>
-                navigation.navigate('ItemDetail', { itemId: item.id })
-              }
+{items.length === 0 ? (
+  <Text style={styles.empty}>No items yet</Text>
+) : (
+  <FlatList
+    data={items}
+    keyExtractor={(item) => item.id.toString()}
+    renderItem={({ item }) => {
+      const isLow = item.quantity <= item.low_stock_threshold;
+      return (
+        <TouchableOpacity
+          onPress={() =>
+            navigation.navigate('ItemDetail', { itemId: item.id })
+          }
+        >
+          <View style={styles.row}>
+            <Text
+              style={[
+                styles.name,
+                isLow && styles.lowStock
+              ]}
             >
-              <View style={styles.row}>
-                <Text style={styles.name}>{item.name}</Text>
-                <Text style={styles.qty}>{item.quantity}</Text>
-              </View>
-            </TouchableOpacity>
+              {item.name}
+            </Text>
 
-          )}
-        />
-      )}
+            <Text
+              style={[
+                styles.qty,
+                isLow && styles.lowStock
+              ]}
+            >
+              {item.quantity}
+            </Text>
+          </View>
+        </TouchableOpacity>
+      );
+    }}
+  />
+)}
     </View>
   );
 };
@@ -120,4 +147,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
   },
+  lowStock: {
+    color: '#d9534f',
+  },
+
 });
