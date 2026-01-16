@@ -16,19 +16,21 @@ export const CREATE_ITEMS_TABLE = `
     );
 `;
 
-export const sales  = `
+export const CREATE_SALES_TABLE = `
   CREATE TABLE IF NOT EXISTS sales (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     created_at INTEGER NOT NULL,
     total REAL NOT NULL
 )`;
 
-export const sale_items   = `
-  CREATE TABLE IF NOT EXISTS sales (
+export const CREATE_SALE_ITEMS_TABLE = `
+  CREATE TABLE IF NOT EXISTS sale_items (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     sale_id INTEGER NOT NULL,
     item_id INTEGER NOT NULL,
     quantity INTEGER NOT NULL,
     price REAL NOT NULL,
     FOREIGN KEY (sale_id) REFERENCES sales(id)
-)`;
+  );
+`;
+

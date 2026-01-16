@@ -1,26 +1,29 @@
-import { getDB } from '../db';
+import { getDB, isDBReady } from '../db';
 import { Item } from '../types/inventory';
 
 const now = () => Date.now();
 
 export const getAllItems = (): Item[] => {
+   if (!isDBReady()) {
+    return [];
+  }
   const db = getDB();
   const result = db.execute(`
     SELECT
-  id,
-  name,
-  barcode,
-  sku,
-  sell_price,
-  buy_price,
-  quantity,
-  low_stock_threshold,
-  created_at,
-  updated_at
-FROM items
-WHERE is_deleted = 0
-ORDER BY name
-`);
+      id,
+      name,
+      barcode,
+      sku,
+      sell_price,
+      buy_price,
+      quantity,
+      low_stock_threshold,
+      created_at,
+      updated_at
+    FROM items
+    WHERE is_deleted = 0
+    ORDER BY name
+  `);
   // const result = db.execute(`SELECT * FROM items  where is_deleted = 0 ORDER BY name`);
 
   return result.rows?._array.map((row: any) => ({
@@ -48,6 +51,9 @@ export const addItem = (name: string, sku?: string) => {
 };
 
 export const getArchivedItems = (): Item[] => {
+   if (!isDBReady()) {
+    return [];
+  }
   const db = getDB();
   const result = db.execute(
     `SELECT
@@ -109,6 +115,9 @@ export const adjustItemQty = (itemId: number, delta: number) => {
 
 
 export const getLowStockItems = (): Item[] => {
+   if (!isDBReady()) {
+    return [];
+  }
   const db = getDB();
   const result = db.execute(
     `SELECT

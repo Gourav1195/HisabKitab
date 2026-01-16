@@ -1,17 +1,18 @@
-import React, {  useCallback, useLayoutEffect, useState } from 'react';
+import React, { useCallback, useLayoutEffect, useState } from 'react';
 import {
   View,
   Text,
   FlatList,
   StyleSheet,
   Button,
-  TouchableOpacity, 
+  TouchableOpacity,
 
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { 
+import {
   // addItem,
-   getAllItems } from '../repo/inventoryRepo';
+  getAllItems
+} from '../repo/inventoryRepo';
 import { Item } from '../types/inventory';
 
 const SettingsButton = () => {
@@ -29,17 +30,17 @@ const SettingsButton = () => {
 const InventoryListScreen = ({ navigation }: any) => {
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   useFocusEffect(
     useCallback(() => {
       loadItems();
     }, [])
   );
-useLayoutEffect(() => {
-  navigation.setOptions({
-    headerRight: SettingsButton,
-  });
-}, [navigation]);
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: SettingsButton,
+    });
+  }, [navigation]);
 
   const loadItems = () => {
     try {
@@ -69,44 +70,44 @@ useLayoutEffect(() => {
 
       <Text style={styles.header}>Inventory</Text>
 
-{items.length === 0 ? (
-  <Text style={styles.empty}>No items yet</Text>
-) : (
-  <FlatList
-    data={items}
-    keyExtractor={(item) => item.id.toString()}
-    renderItem={({ item }) => {
-      const isLow = item.quantity <= item.low_stock_threshold;
-      return (
-        <TouchableOpacity
-          onPress={() =>
-            navigation.navigate('ItemDetail', { itemId: item.id })
-          }
-        >
-          <View style={styles.row}>
-            <Text
-              style={[
-                styles.name,
-                isLow && styles.lowStock
-              ]}
-            >
-              {item.name}
-            </Text>
+      {items.length === 0 ? (
+        <Text style={styles.empty}>No items yet</Text>
+      ) : (
+        <FlatList
+          data={items}
+          keyExtractor={(item) => item.id.toString()}
+          renderItem={({ item }) => {
+            const isLow = item.quantity <= item.low_stock_threshold;
+            return (
+              <TouchableOpacity
+                onPress={() =>
+                  navigation.navigate('ItemDetail', { itemId: item.id })
+                }
+              >
+                <View style={styles.row}>
+                  <Text
+                    style={[
+                      styles.name,
+                      isLow && styles.lowStock
+                    ]}
+                  >
+                    {item.name}
+                  </Text>
 
-            <Text
-              style={[
-                styles.qty,
-                isLow && styles.lowStock
-              ]}
-            >
-              {item.quantity}
-            </Text>
-          </View>
-        </TouchableOpacity>
-      );
-    }}
-  />
-)}
+                  <Text
+                    style={[
+                      styles.qty,
+                      isLow && styles.lowStock
+                    ]}
+                  >
+                    {item.quantity}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            );
+          }}
+        />
+      )}
     </View>
   );
 };

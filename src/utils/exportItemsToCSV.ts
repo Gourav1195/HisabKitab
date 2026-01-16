@@ -4,7 +4,8 @@ import { getDB } from '../db';
 export const exportItemsToCSV = async () => {
   const db = getDB();
 
-  const result = db.execute(
+  // Export items table
+  const itemsResult = db.execute(
     `SELECT
       id,
       name,
@@ -16,16 +17,13 @@ export const exportItemsToCSV = async () => {
       created_at,
       updated_at,
       is_deleted
-     FROM items
-     `
+     FROM items`
   );
-//WHERE is_deleted = 0
-  const rows = result.rows?._array || [];
-  if (rows.length === 0) {
+  const itemsRows = itemsResult.rows?._array || [];
+  if (itemsRows.length === 0) {
     throw new Error('No data to export');
   }
-
-  const header = [
+  const itemsHeader = [
     'id',
     'name',
     'barcode',
@@ -37,22 +35,67 @@ export const exportItemsToCSV = async () => {
     'updated_at',
     'is_deleted',
   ];
-
-  const csvRows = [
-    header.join(','),
-    ...rows.map(row =>
-      header.map(key => {
+  const itemsCsvRows = [
+    'Items Table',
+    itemsHeader.join(','),
+    ...itemsRows.map(row =>
+      itemsHeader.map(key => {
         const value = row[key];
         if (value == null) return '';
         return `"${String(value).replace(/"/g, '""')}"`;
       }).join(',')
     ),
+    '', // Empty line after table
+  ];
+
+  // Export sales table
+  const salesResult = db.execute(
+    `SELECT id, created_at, total FROM sales`
+  );
+  const salesRows = salesResult.rows?._array || [];
+  const salesHeader = ['id', 'created_at', 'total'];
+  const salesCsvRows = [
+    'Sales Table',
+    salesHeader.join(','),
+    ...salesRows.map(row =>
+      salesHeader.map(key => {
+        const value = row[key];
+        if (value == null) return '';
+        return `"${String(value).replace(/"/g, '""')}"`;
+      }).join(',')
+    ),
+    '',
+  ];
+
+  // Export sale_items table
+  const saleItemsResult = db.execute(
+    `SELECT id, sale_id, item_id, quantity, price FROM sale_items`
+  );
+  const saleItemsRows = saleItemsResult.rows?._array || [];
+  const saleItemsHeader = ['id', 'sale_id', 'item_id', 'quantity', 'price'];
+  const saleItemsCsvRows = [
+    'Sale Items Table',
+    saleItemsHeader.join(','),
+    ...saleItemsRows.map(row =>
+      saleItemsHeader.map(key => {
+        const value = row[key];
+        if (value == null) return '';
+        return `"${String(value).replace(/"/g, '""')}"`;
+      }).join(',')
+    ),
+    '',
+  ];
+
+  // Combine all CSV rows
+  const csvRows = [
+    ...itemsCsvRows,
+    ...salesCsvRows,
+    ...saleItemsCsvRows,
   ];
 
   const csvContent = csvRows.join('\n');
   const filePath = `${RNFS.DownloadDirectoryPath}/hisabkitab_items_${Date.now()}.csv`;
 
-  // 🔑 THIS IS THE IMPORTANT PART
   const exists = await RNFS.exists(filePath);
   if (exists) {
     await RNFS.unlink(filePath);

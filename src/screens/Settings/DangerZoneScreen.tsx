@@ -19,9 +19,8 @@ const DangerZoneScreen = () => {
             const db = getDB();
             // db.execute('DELETE FROM items');
             db.execute(`UPDATE items
-                SET is_deleted = 1, updated_at = ?
-                WHERE id = ?
-                `);
+                SET is_deleted = 1, 
+                updated_at = ?`,[Date.now()]);
           },
         },
       ]
@@ -30,7 +29,7 @@ const DangerZoneScreen = () => {
 
   return (
     <View>
-      <Button title="Clear all data" color="red" onPress={clearAll} />
+      <Button title="Archive all data" color="red" onPress={clearAll} />
     </View>
   );
 };

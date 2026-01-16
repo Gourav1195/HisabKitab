@@ -17,3 +17,13 @@ export type CartItem = {
   price: number;
   qty: number;
 };
+
+export type SalesStackParamList = {
+  SalesHistory: undefined;
+  SaleDetails: {
+    saleId: number;
+    total: number;
+    createdAt: number;
+  };
+  Sell: undefined;
+};

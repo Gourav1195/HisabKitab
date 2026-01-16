@@ -1,18 +1,21 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, FlatList, Button, StyleSheet, TouchableOpacity } from 'react-native';
 import { getAllItems } from '../repo/inventoryRepo';
 import { Item, CartItem } from '../types/inventory';
 import { getDB } from '../db';
-
+import { useFocusEffect } from '@react-navigation/native';
 
 const SellScreen = () => {
   const [items, setItems] = useState<Item[]>([]);
   const [cart, setCart] = useState<Record<number, CartItem>>({});
   const [saleDone, setSaleDone] = useState(false);
-
-  useEffect(() => {
-    setItems(getAllItems());
-  }, []);
+  const [loading, setLoading] = useState(true);
+  
+useFocusEffect(
+    useCallback(() => {
+      loadItems();
+    }, [])
+  );
 
   useEffect(() => {
   if (!saleDone) return;
@@ -24,6 +27,20 @@ const SellScreen = () => {
   return () => clearTimeout(t);
 }, [saleDone]);
 
+
+ const loadItems = () => {
+    try {
+      const data = getAllItems();
+      setItems(data);
+      setLoading(false);
+    } catch (err) {
+      console.error('Failed to load items', err);
+      setItems([]);
+      setLoading(false);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const addToCart = (item: Item) => {
     setCart(prev => {
@@ -105,6 +122,13 @@ const completeSale = () => {
   }
 };
 
+ if (loading) {
+    return (
+      <View style={styles.center}>
+        <Text>Loading inventory...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -184,5 +208,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
   },
-
+  center: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });
