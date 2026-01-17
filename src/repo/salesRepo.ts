@@ -51,3 +51,44 @@ export const getSaleItems = (saleId: number) => {
   return result.rows?._array ?? [];
 };
 
+export const returnSaleItem = (
+  saleItemId: number,
+  returnQty: number
+) => {
+  const db = getDB();
+  const now = Date.now();
+
+  db.execute('BEGIN TRANSACTION');
+
+  try {
+    // 1. Update sale_items
+    db.execute(
+      `
+      UPDATE sale_items
+      SET returned_qty = returned_qty + ?,
+          returned_at = ?
+      WHERE id = ?
+        AND (quantity - returned_qty) >= ?
+      `,
+      [returnQty, now, saleItemId, returnQty]
+    );
+
+    // 2. Restore stock
+    db.execute(
+      `
+      UPDATE items
+      SET quantity_left = quantity_left + ?,
+          updated_at = ?
+      WHERE id = (
+        SELECT item_id FROM sale_items WHERE id = ?
+      )
+      `,
+      [returnQty, now, saleItemId]
+    );
+
+    db.execute('COMMIT');
+  } catch (e) {
+    db.execute('ROLLBACK');
+    throw e;
+  }
+};

@@ -14,6 +14,20 @@ const InventoryTabBarIcon = ({ color, size }: { color: string; size: number }) =
     size={size}
   />
 );
+const SalesTabBarIcon = ({ color, size }: { color: string; size: number }) => (
+  <MaterialCommunityIcons
+    name="cart"
+    color={color}
+    size={size}
+  />
+);
+const DashboardTabBarIcon = ({ color, size }: { color: string; size: number }) => (
+  <MaterialCommunityIcons
+    name="view-dashboard"
+    color={color}
+    size={size}
+  />
+);
 
 const BottomTabs = () => {
   return (
@@ -44,7 +58,7 @@ const BottomTabs = () => {
         name="Sell"
         component={SellStack}
         options={{ title: 'Sell',
-          
+          tabBarIcon: SalesTabBarIcon,
          }}
         listeners={({ navigation }) => ({
         tabPress: _e => {
@@ -57,7 +71,7 @@ const BottomTabs = () => {
       <Tab.Screen
         name="Dashboard"
         component={DashboardScreen}
-        options={{ title: 'Dashboard' }}
+        options={{ title: 'Dashboard', tabBarIcon: DashboardTabBarIcon, }}
       />
     </Tab.Navigator>
   );

@@ -1,4 +1,4 @@
-import { CREATE_ITEMS_TABLE, CREATE_SALES_TABLE, CREATE_SALE_ITEMS_TABLE  } from './schema';
+import { CREATE_ITEMS_TABLE, CREATE_SALES_TABLE, CREATE_SALE_ITEMS_TABLE, CREATE_PROFILE_TABLE  } from './schema';
 import { open } from 'react-native-quick-sqlite';
 
 let db: ReturnType<typeof open> | null = null;
@@ -18,6 +18,7 @@ export const initDB = () => {
   database.execute(CREATE_ITEMS_TABLE);
   database.execute(CREATE_SALES_TABLE);
   database.execute(CREATE_SALE_ITEMS_TABLE);
+  database.execute(CREATE_PROFILE_TABLE);
 
   // add other CREATE TABLE statements here later
   initialized = true;

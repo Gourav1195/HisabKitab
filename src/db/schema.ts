@@ -30,7 +30,18 @@ export const CREATE_SALE_ITEMS_TABLE = `
     item_id INTEGER NOT NULL,
     quantity INTEGER NOT NULL,
     price REAL NOT NULL,
+    returned_qty INTEGER NOT NULL DEFAULT 0,
+    returned_at INTEGER,
     FOREIGN KEY (sale_id) REFERENCES sales(id)
   );
 `;
 
+export const CREATE_PROFILE_TABLE = `
+  CREATE TABLE IF NOT EXISTS profile (
+    id INTEGER PRIMARY KEY,
+    shop_name TEXT,
+    phone TEXT,
+    created_at INTEGER,
+    is_pro BOOLEAN DEFAULT 0
+  );
+`;

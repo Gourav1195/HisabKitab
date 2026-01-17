@@ -1,40 +1,162 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
+import { LineChart } from 'react-native-chart-kit';
+
 import {
-  getTodaySalesSummary,
-  getInventorySummary,
+  getTodayStats,
+  getWeeklyStats,
+  getInventoryHealth,
+  getLastSale,
+  getLast7DaysSales,
+  getTopItemsThisWeek,
+  getBestSellerToday,
 } from '../repo/dashboardRepo';
 
+const screenWidth = Dimensions.get('window').width;
+
 const DashboardScreen = () => {
-  const [sales, setSales] = useState({ total: 0, count: 0 });
+  const [today, setToday] = useState({
+    total: 0,
+    count: 0,
+    itemsSold: 0,
+  });
+
+  const [week, setWeek] = useState({
+    total: 0,
+    avgPerDay: 0,
+  });
+
   const [inventory, setInventory] = useState({
     totalItems: 0,
     lowStock: 0,
+    outOfStock: 0,
   });
 
-  useEffect(() => {
-    setSales(getTodaySalesSummary());
-    setInventory(getInventorySummary());
-  }, []);
+  const [lastSale, setLastSale] = useState<{
+    id: number;
+    total: number;
+    createdAt: number;
+  } | null>(null);
+
+  const [weeklySeries, setWeeklySeries] = useState<
+    { day: string; total: number }[]
+  >([]);
+
+  const [bestToday, setBestToday] = useState<{
+    id: number;
+    name: string;
+    quantity: number;
+  } | null>(null);
+
+  const [topWeek, setTopWeek] = useState<
+    { id: number; name: string; quantity: number }[]
+  >([]);
+
+  useFocusEffect(
+    useCallback(() => {
+      setToday(getTodayStats());
+      setWeek(getWeeklyStats());
+      setInventory(getInventoryHealth());
+      setLastSale(getLastSale());
+      setWeeklySeries(getLast7DaysSales());
+      setBestToday(getBestSellerToday());
+      setTopWeek(getTopItemsThisWeek());
+    }, [])
+  );
 
   return (
     <View style={styles.container}>
-      <View>
-      <Text style={{ fontSize: 24, fontWeight: '600', marginBottom: 4 }}>Dashboard</Text>
-      </View>
-      <View style={styles.card}>
-        <Text style={styles.label}>Today’s Sales</Text>
-        <Text style={styles.value}>₹ {sales.total}</Text>
-        <Text style={styles.sub}>{sales.count} sales</Text>
-      </View>
+      <Text style={styles.title}>Dashboard</Text>
 
+      {/* TODAY */}
       <View style={styles.card}>
-        <Text style={styles.label}>Inventory</Text>
-        <Text style={styles.value}>{inventory.totalItems} items</Text>
+        <Text style={styles.label}>Today</Text>
+        <Text style={styles.value}>₹ {today.total}</Text>
         <Text style={styles.sub}>
-          {inventory.lowStock} low stock
+          {today.count} sales • {today.itemsSold} items
         </Text>
       </View>
+
+      {/* WEEK */}
+      <View style={styles.card}>
+        <Text style={styles.label}>This week</Text>
+        <Text style={styles.value}>₹ {week.total}</Text>
+        <Text style={styles.sub}>Avg ₹ {week.avgPerDay} / day</Text>
+      </View>
+
+      {/* SALES CHART */}
+      {weeklySeries.length > 0 ? (
+        <View style={styles.card}>
+          <Text style={styles.label}>Last 7 days sales</Text>
+
+          <LineChart
+            data={{
+              labels: weeklySeries.map(d => d.day),
+              datasets: [
+                {
+                  data: weeklySeries.map(d => d.total),
+                },
+              ],
+            }}
+            width={screenWidth - 32}
+            height={220}
+            yAxisLabel="₹ "
+            chartConfig={{
+              backgroundGradientFrom: '#f7f7f7',
+              backgroundGradientTo: '#f7f7f7',
+              color: () => '#007aff',
+              labelColor: () => '#666',
+              propsForDots: {
+                r: '4',
+              },
+            }}
+            bezier
+            style={{ marginTop: 12 }}
+          />
+        </View>
+      ): null}
+
+      {/* INVENTORY */}
+      <View style={styles.card}>
+        <Text style={styles.label}>Inventory</Text>
+        <Text style={styles.sub}>
+          {inventory.totalItems} items • {inventory.lowStock} low •{' '}
+          {inventory.outOfStock} out
+        </Text>
+      </View>
+
+      {/* LAST SALE */}
+      {lastSale && (
+        <View style={styles.card}>
+          <Text style={styles.label}>Last sale</Text>
+          <Text style={styles.sub}>
+            ₹ {lastSale.total} •{' '}
+            {new Date(lastSale.createdAt).toLocaleString()}
+          </Text>
+        </View>
+      )}
+
+      {bestToday && (
+        <View style={styles.card}>
+          <Text style={styles.label}>Best seller today</Text>
+          <Text style={styles.sub}>
+            {bestToday.name} • {bestToday.quantity} sold
+          </Text>
+        </View>
+      )}
+      {topWeek.length > 0 && (
+        <View style={styles.card}>
+          <Text style={styles.label}>Top items this week</Text>
+
+          {topWeek.map((i, idx) => (
+            <Text key={i.id} style={styles.sub}>
+              {idx + 1}. {i.name} • {i.quantity}
+            </Text>
+          ))}
+        </View>
+      )}
+
     </View>
   );
 };
@@ -46,6 +168,10 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
     gap: 16,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: '600',
   },
   card: {
     padding: 16,

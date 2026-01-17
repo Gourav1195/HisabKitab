@@ -13,8 +13,8 @@ const renderSalesHistoryButton = () => <SalesHistoryButton />;
 const SellStack = () => {
   return (
     <Stack.Navigator>
-      <Stack.Screen
-        name="Sell"
+       <Stack.Screen
+        name="SellHome"
         component={SellScreen}
         options={{
           title: 'Sell Items',

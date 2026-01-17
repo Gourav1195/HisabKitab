@@ -14,6 +14,7 @@ import {
   getAllItems
 } from '../repo/inventoryRepo';
 import { Item } from '../types/inventory';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
 const SettingsButton = () => {
   const navigation = useNavigation<any>();
@@ -23,7 +24,11 @@ const SettingsButton = () => {
       onPress={() => navigation.navigate('Settings')}
       style={{ marginRight: 12 }}
     >
-      <Text style={{ fontSize: 18 }}>⚙️</Text>
+       <MaterialCommunityIcons
+        name="cog"
+        size={22}
+        color="#007aff"
+      />
     </TouchableOpacity>
   );
 };

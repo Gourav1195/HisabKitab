@@ -5,15 +5,12 @@ import { getDB } from '../../db';
 const DangerZoneScreen = () => {
   const clearAll = () => {
     Alert.alert(
-    //   'Clear all data',
-        //   'This will permanently delete all items.',
-    'Archive all data',
-      'This will Archive your all items.',
+    'Clear all data',
+      'This will Delete your all items.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
-        //   text: 'Delete',
-          text: 'Archive',
+          text: 'Delete',
           style: 'destructive',
           onPress: () => {
             const db = getDB();
@@ -29,7 +26,7 @@ const DangerZoneScreen = () => {
 
   return (
     <View>
-      <Button title="Archive all data" color="red" onPress={clearAll} />
+      <Button title="Delete all data" color="red" onPress={clearAll} />
     </View>
   );
 };

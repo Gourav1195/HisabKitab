@@ -25,5 +25,5 @@ export type SalesStackParamList = {
     total: number;
     createdAt: number;
   };
-  Sell: undefined;
+  SellHome: undefined;
 };

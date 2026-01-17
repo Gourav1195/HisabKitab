@@ -1,6 +1,6 @@
-// components/SalesHistoryButton.tsx
 import React from 'react';
-import { TouchableOpacity, Text } from 'react-native';
+import { TouchableOpacity } from 'react-native';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
 
 const SalesHistoryButton = () => {
@@ -11,7 +11,11 @@ const SalesHistoryButton = () => {
       onPress={() => navigation.navigate('SalesHistory')}
       style={{ marginRight: 12 }}
     >
-      <Text style={{ fontSize: 18 }}>🧾</Text>
+      <MaterialCommunityIcons
+        name="history"
+        size={22}
+        color="#007aff"
+      />
     </TouchableOpacity>
   );
 };

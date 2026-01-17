@@ -104,3 +104,35 @@ export const exportItemsToCSV = async () => {
   await RNFS.writeFile(filePath, csvContent, 'utf8');
   return filePath;
 };
+
+
+export const exportSalesCSV = async () => {
+  const db = getDB();
+
+  const res = db.execute(`
+    SELECT 
+      s.id,
+      s.created_at,
+      s.total,
+      COUNT(si.id) as items_count
+    FROM sales s
+    LEFT JOIN sale_items si ON si.sale_id = s.id
+    GROUP BY s.id
+    ORDER BY s.created_at DESC
+  `);
+
+  const rows = res.rows?._array || [];
+  if (!rows.length) throw new Error('No sales to export');
+
+  const header = ['id', 'created_at', 'total', 'items_count'];
+  const csv = [
+    header.join(','),
+    ...rows.map(r =>
+      header.map(k => `"${String(r[k] ?? '')}"`).join(',')
+    ),
+  ].join('\n');
+
+  const path = `${RNFS.DownloadDirectoryPath}/hisabkitab_sales_${Date.now()}.csv`;
+  await RNFS.writeFile(path, csv, 'utf8');
+  return path;
+};
