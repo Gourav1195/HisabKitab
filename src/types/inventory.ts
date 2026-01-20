@@ -5,11 +5,13 @@ export interface Item {
   sku?: string | null;
   sell_price: number;
   buy_price?: number;
-  quantity: number;
+  quantity?: number;
+  quantity_left?: number;
   low_stock_threshold: number;
-  createdAt: number;
-  updatedAt: number;
-}
+  created_at: number;
+  updated_at: number;
+  is_deleted: boolean;
+} 
 
 export type CartItem = {
   id: number;
@@ -26,4 +28,5 @@ export type SalesStackParamList = {
     createdAt: number;
   };
   SellHome: undefined;
+  CreditLedger: undefined;
 };

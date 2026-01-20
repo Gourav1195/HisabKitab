@@ -2,9 +2,10 @@ import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import SellScreen from '../screens/SellScreen';
 import SalesHistoryScreen from '../screens/Sales/SalesHistoryScreen';
-import SalesHistoryButton from '../components/SalesHistoryButton';
+import SalesHistoryButton from '../components/Sales/SalesHistoryButton';
 import { SalesStackParamList } from '../types/inventory';
 import SaleDetailsScreen from '../screens/Sales/SaleDetailsScreen';
+import CreditLedgerScreen from '../screens/Sales/CreditLedgerScreen';
 // const Stack = createNativeStackNavigator();
 const Stack = createNativeStackNavigator<SalesStackParamList>();
 
@@ -35,6 +36,11 @@ const SellStack = () => {
           headerRight: renderSalesHistoryButton,
         }}
       />
+      <Stack.Screen 
+      name="CreditLedger" 
+      component={CreditLedgerScreen} 
+      options={{ title: 'Credit Ledger' }}
+    />
     </Stack.Navigator>
   );
 };

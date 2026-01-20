@@ -14,6 +14,8 @@ export const exportItemsToCSV = async () => {
       sell_price,
       buy_price,
       quantity,
+      quantity_left,
+      low_stock_threshold,
       created_at,
       updated_at,
       is_deleted
@@ -31,6 +33,8 @@ export const exportItemsToCSV = async () => {
     'sell_price',
     'buy_price',
     'quantity',
+    'quantity_left',
+    'low_stock_threshold',
     'created_at',
     'updated_at',
     'is_deleted',

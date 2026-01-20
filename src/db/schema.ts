@@ -20,7 +20,10 @@ export const CREATE_SALES_TABLE = `
   CREATE TABLE IF NOT EXISTS sales (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     created_at INTEGER NOT NULL,
-    total REAL NOT NULL
+    total REAL NOT NULL,
+    is_credit INTEGER NOT NULL DEFAULT 0,
+    customer_id INTEGER,
+    FOREIGN KEY (customer_id) REFERENCES customers(id)
 )`;
 
 export const CREATE_SALE_ITEMS_TABLE = `
@@ -38,10 +41,32 @@ export const CREATE_SALE_ITEMS_TABLE = `
 
 export const CREATE_PROFILE_TABLE = `
   CREATE TABLE IF NOT EXISTS profile (
-    id INTEGER PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     shop_name TEXT,
     phone TEXT,
     created_at INTEGER,
     is_pro BOOLEAN DEFAULT 0
   );
 `;
+
+export const CREATE_CUSTOMER_TABLE = `
+  CREATE TABLE IF NOT EXISTS customers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    phone TEXT,
+    created_at INTEGER NOT NULL,
+    is_deleted INTEGER NOT NULL DEFAULT 0
+  );
+`;
+export const CREATE_LEDGER_TABLE = `
+ CREATE TABLE IF NOT EXISTS ledger (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  customer_id INTEGER NOT NULL,
+  type TEXT NOT NULL,            -- 'SALE' | 'PAYMENT'
+  direction TEXT NOT NULL,       -- 'DEBIT' | 'CREDIT'
+  amount REAL NOT NULL,          -- positive number
+  sale_id INTEGER,               -- nullable
+  note TEXT,
+  created_at INTEGER NOT NULL,
+  FOREIGN KEY (customer_id) REFERENCES customers(id)
+);`;

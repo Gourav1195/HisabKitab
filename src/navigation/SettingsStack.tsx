@@ -5,6 +5,7 @@ import DataSettingsScreen from '../screens/Settings/DataSettingsScreen';
 import AppInfoScreen from '../screens/Settings/AppInfoScreen';
 import DangerZoneScreen from '../screens/Settings/DangerZoneScreen';
 import ArchivedItemsScreen from '../screens/Settings/ArchivedItemScreen';
+import ProScreen from '../screens/ProScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -36,6 +37,12 @@ const SettingsStack = () => {
         component={ArchivedItemsScreen}
         options={{ title: 'Archived Items' }}
         />
+        <Stack.Screen
+        name="Pro"
+        component={ProScreen}
+        options={{ title: 'Upgrade' }}
+      />
+
     </Stack.Navigator>
   );
 };

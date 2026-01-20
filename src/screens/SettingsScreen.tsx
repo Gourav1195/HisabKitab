@@ -28,7 +28,7 @@ const SettingsScreen = ({ navigation }: any) => {
       >
         <Text style={[styles.title, styles.danger]}>
           {/* Danger Zone */}
-          Archive Data
+          Delete All  Data
         </Text>
         <Text style={styles.sub}>Clear all data</Text>
       </TouchableOpacity>
@@ -36,8 +36,8 @@ const SettingsScreen = ({ navigation }: any) => {
         style={styles.row}
         onPress={() => navigation.navigate('ArchivedItems')}
       >
-        <Text style={styles.title}>Archived Items</Text>
-        <Text style={styles.sub}>Restore hidden items</Text>
+        <Text style={styles.title}>Bin</Text>
+        <Text style={styles.sub}>Restore Deleted items</Text>
       </TouchableOpacity>
 
     </View>

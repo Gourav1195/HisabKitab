@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, ScrollView } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { LineChart } from 'react-native-chart-kit';
 
@@ -12,6 +12,7 @@ import {
   getTopItemsThisWeek,
   getBestSellerToday,
 } from '../repo/dashboardRepo';
+// import { isProUser } from '../repo/userRepo';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -66,6 +67,7 @@ const DashboardScreen = () => {
   );
 
   return (
+    <ScrollView>
     <View style={styles.container}>
       <Text style={styles.title}>Dashboard</Text>
 
@@ -86,7 +88,9 @@ const DashboardScreen = () => {
       </View>
 
       {/* SALES CHART */}
-      {weeklySeries.length > 0 ? (
+      {weeklySeries.length > 0
+      // && isProUser()
+      ? (
         <View style={styles.card}>
           <Text style={styles.label}>Last 7 days sales</Text>
 
@@ -158,6 +162,7 @@ const DashboardScreen = () => {
       )}
 
     </View>
+    </ScrollView>
   );
 };
 

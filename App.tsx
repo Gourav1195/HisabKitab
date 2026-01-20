@@ -3,11 +3,28 @@ import { View, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { initDB } from './src/db';
 import  RootStack  from './src/navigation/RootStack';
+import { Text, TextInput } from 'react-native';
 
 const App = () => {
   useEffect(() => {
     initDB();
   }, []);
+
+  
+if ((Text as any).defaultProps == null) {
+  (Text as any).defaultProps = {};
+}
+if ((TextInput as any).defaultProps == null) {
+  (TextInput as any).defaultProps = {};
+}
+
+(Text as any).defaultProps.style = {
+  fontFamily: 'Lora-Regular',
+};
+
+(TextInput as any).defaultProps.style = {
+  fontFamily: 'Lora-Regular',
+};
 
   return (
     <View style={styles.container}>
