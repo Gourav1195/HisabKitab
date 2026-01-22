@@ -80,7 +80,7 @@ const InventoryListScreen = ({ navigation }: any) => {
       } else {
         setLoading(true);
       }
-      
+
       const data = getAllItems();
       setItems(data);
     } catch (err) {
@@ -95,88 +95,100 @@ const InventoryListScreen = ({ navigation }: any) => {
 
   // Move the ItemRow component outside as a separate component
   const ItemRow = React.useCallback(({ item }: { item: Item }) => {
-    const getQuantityColor = (row: Item) => {
-      // const qtyLeft = Number(row.quantity_left);
-      const qty = Number(row.quantity);
+    const getQuantityStyle = (row: Item) => {
+      const qty = Number(row.quantity_left);
+      // const qty = Number(row.quantity);
       const threshold = Number(row.low_stock_threshold);
-      //   const res = getDB().execute(
-      //   `SELECT id, quantity_left, low_stock_threshold FROM items`
-      // );
-      // console.log(res.rows?._array);
 
-      if (qty === null || qty === undefined) {
-        return Colors.error;
+      if (Number.isNaN(qty)) {
+        return { color: Colors.stockOk, badge: null };
       }
-      const isLowOrOut =
-        !Number.isNaN(qty) &&
-        (qty === 0 || (!Number.isNaN(threshold) && qty <= threshold));
 
-      const quantityColor = isLowOrOut
-        ? Colors.stockLow
-        : Colors.stockGood;
-      return quantityColor;
+      if (qty === 0) {
+        return { color: Colors.stockOut, badge: 'OUT' };
+      }
+
+      if (!Number.isNaN(threshold) && qty <= threshold) {
+        return { color: Colors.stockLow, badge: 'LOW' };
+      }
+
+
+      return { color: Colors.stockOk, badge: null };
     };
-
-    const quantityColor = getQuantityColor(item);
-    const isLowOrOut = item.quantity_left !== null && 
-                      item.quantity_left !== undefined && 
-                      (item.quantity_left === 0 || item.quantity_left <= item.low_stock_threshold);
+    const status = getQuantityStyle(item);
 
     return (
       <TouchableOpacity
         // onPress={() => handleItemPress(item.id)}
-                onPress={() => navigation.navigate('ItemDetail', { itemId: item.id })}
+        onPress={() => navigation.navigate('ItemDetail', { itemId: item.id })}
 
         style={styles.itemRow}
       >
         <View style={styles.itemContent}>
-          <Text 
+          <Text
             style={[
-              styles.itemName, 
-              {  color: quantityColor, fontSize: Typography.fontSize.md * fontScale }
-            ]} 
-            numberOfLines={1}
+              styles.itemName,
+              { fontSize: Typography.fontSize.md * fontScale }
+            ]}
           >
             {item.name}
           </Text>
-          
+
           {item.quantity_left !== null && item.quantity_left !== undefined ? (
-            <Text 
+            <Text
               style={[
                 styles.quantityInline,
-                { color: quantityColor, fontSize: Typography.fontSize.sm * fontScale }
+                { color: status.color, fontSize: Typography.fontSize.sm * fontScale }
               ]}
             >
-             qt • {item.quantity_left}
+              • {item.quantity_left}
             </Text>
-          ) : null}
+          ) : <Text
+            style={[
+              styles.quantityInline,
+              { color: status.color, fontSize: Typography.fontSize.sm * fontScale }
+            ]}
+          >
+            qt • 0
+          </Text>}
         </View>
 
         <View style={styles.itemRight}>
-          <Text 
+          <Text
             style={[
-              styles.itemPrice, 
-              { color: quantityColor,fontSize: Typography.fontSize.md * fontScale }
+              styles.quantityInline,
+              { color: status.color, fontSize: Typography.fontSize.sm * fontScale }
             ]}
           >
             ₹{item.sell_price || 0}
           </Text>
-          
-          {isLowOrOut && (
+
+          {/* {isLowOrOut && (
             <MaterialCommunityIcons
               name="alert-circle"
               size={14 * fontScale}
               color={Colors.error}
               style={styles.lowStockIcon}
             />
+          )} */}
+          {status.badge && (
+            <View style={[
+              styles.stockBadge,
+              status.badge === 'LOW' ? styles.lowBadge : styles.outBadge
+            ]}>
+              <Text style={styles.stockBadgeText}>
+                {status.badge}
+              </Text>
+            </View>
           )}
+
         </View>
       </TouchableOpacity>
     );
   }, [fontScale, navigation]); // Add dependencies here
 
   const filteredItems = useMemo(() => {
-    return items.filter(item => 
+    return items.filter(item =>
       item.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [items, searchQuery]);
@@ -227,39 +239,64 @@ const InventoryListScreen = ({ navigation }: any) => {
 
   return (
     <View style={styles.container}>
-      <AddItemForm onItemAdded={loadItems} />
 
-      <View style={styles.searchContainer}>
-        <TextInput
-          placeholder="Search items..."
-          placeholderTextColor={Colors.textLight}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          style={[styles.searchInput, { fontSize: Typography.fontSize.md * fontScale }]}
-          clearButtonMode="while-editing"
-        />
+      {/* ADD ITEM SECTION */}
+      <View style={styles.addSection}>
+        {/* <Text style={styles.sectionTitle}>Add Item</Text> */}
+        <AddItemForm onItemAdded={loadItems} />
       </View>
 
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <Text style={[styles.headerText, { fontSize: Typography.fontSize.xl * fontScale }]}>
-            Inventory
-          </Text>
-          <Text style={[styles.countText, { fontSize: Typography.fontSize.sm * fontScale }]}>
-            {filteredItems.length} items
-          </Text>
-        </View>
-        
-        <View style={styles.headerRight}>
-          <Text style={[styles.alphaLabel, { fontSize: Typography.fontSize.sm * fontScale }]}>
-            A-Z Index
-          </Text>
-          <Switch
-            value={showAlphaIndex}
-            onValueChange={setShowAlphaIndex}
-            trackColor={{ false: Colors.border, true: Colors.primary }}
-            thumbColor={Colors.surface}
+      {/* DIVIDER */}
+      {/* <View style={styles.sectionDivider} /> */}
+
+      {/* BROWSE / SEARCH SECTION */}
+      <View style={styles.browseSection}>
+        {/* <Text style={styles.sectionTitleMuted}>Browse Inventory</Text> */}
+
+        <View style={styles.searchContainer}>
+          <TextInput
+            placeholder="Search items..."
+            placeholderTextColor={Colors.textLight}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            style={[
+              styles.searchInput,
+              { fontSize: Typography.fontSize.md * fontScale }
+            ]}
+            clearButtonMode="while-editing"
           />
+        </View>
+
+        <View style={styles.header}>
+          <View style={styles.headerLeft}>
+            <Text style={[
+              styles.headerText,
+              { fontSize: Typography.fontSize.xl * fontScale }
+            ]}>
+              Item List
+            </Text>
+            <Text style={[
+              styles.countText,
+              { fontSize: Typography.fontSize.sm * fontScale }
+            ]}>
+              {filteredItems.length} items
+            </Text>
+          </View>
+
+          <View style={styles.headerRight}>
+            <Text style={[
+              styles.alphaLabel,
+              { fontSize: Typography.fontSize.sm * fontScale }
+            ]}>
+              A–Z Index
+            </Text>
+            <Switch
+              value={showAlphaIndex}
+              onValueChange={setShowAlphaIndex}
+              trackColor={{ false: Colors.border, true: Colors.primary }}
+              thumbColor={Colors.surface}
+            />
+          </View>
         </View>
       </View>
 
@@ -350,7 +387,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.borderLight,
   },
   searchInput: {
-    height: 36,
+    height: 44,
     borderWidth: 1,
     borderColor: Colors.border,
     borderRadius: 6,
@@ -409,7 +446,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: Spacing.sm,
+    paddingVertical: Spacing.md,
     paddingHorizontal: Spacing.md,
     backgroundColor: Colors.surface,
     borderBottomWidth: 1,
@@ -422,11 +459,12 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   itemName: {
-    color: Colors.textPrimary,
-    fontFamily: 'Lora-Bold',
-    fontWeight: '500',
+    color: Colors.textSecondary,
+    fontWeight: Typography.fontWeight.bold,
+    letterSpacing: 0.2,
     flexShrink: 0,
   },
+
   quantityInline: {
     fontWeight: '500',
     flexShrink: 0,
@@ -448,12 +486,61 @@ const styles = StyleSheet.create({
   },
   sectionHeader: {
     fontWeight: '700',
-    color: Colors.primary,
-    backgroundColor: Colors.background,
-    paddingVertical: Spacing.xs,
-    paddingHorizontal: Spacing.md,
-    marginTop: Spacing.sm,
+    color: Colors.textSecondary,
+    letterSpacing: 1,
+    opacity: 0.8,
   },
+  stockBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    marginLeft: Spacing.sm,
+  },
+  lowBadge: {
+    backgroundColor: Colors.stockLow + '20',
+  },
+  outBadge: {
+    backgroundColor: Colors.stockOut + '20',
+  },
+  stockBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    color: Colors.textPrimary,
+  },
+  addSection: {
+    backgroundColor: Colors.surface,
+    paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.lg,
+  },
+
+  browseSection: {
+    backgroundColor: Colors.background,
+  },
+
+  sectionDivider: {
+    height: 8,
+    backgroundColor: Colors.borderLight,
+  },
+
+  sectionTitle: {
+    fontSize: Typography.fontSize.sm,
+    fontWeight: '700',
+    color: Colors.textSecondary,
+    marginBottom: Spacing.sm,
+    letterSpacing: 0.5,
+  },
+
+  sectionTitleMuted: {
+    fontSize: Typography.fontSize.sm,
+    fontWeight: '600',
+    color: Colors.textLight,
+    marginBottom: Spacing.xs,
+    letterSpacing: 0.5,
+
+  },
+
 });
 
 export default InventoryListScreen;

@@ -1,36 +1,102 @@
-import React from 'react';
-import { TouchableOpacity } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, TouchableOpacity, Text, StyleSheet, Animated } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
+import { Colors } from '../../theme/Colors';
 
-const SalesHistoryButton = () => {
+const SellHeaderActions = () => {
   const navigation = useNavigation<any>();
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  // subtle khata pulse (only once, calm down)
+  useEffect(() => {
+    Animated.sequence([
+      Animated.timing(pulseAnim, {
+        toValue: 1.08,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+      Animated.timing(pulseAnim, {
+        toValue: 1,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [pulseAnim]);
 
   return (
-    <>
-    <TouchableOpacity
-      onPress={() => navigation.navigate('CreditLedger')}
-      style={{ marginRight: 12 }}
-    >
-      <MaterialCommunityIcons
-        name="history-clock-outline"
-        size={22}
-        color="#007aff"
-      />
-    </TouchableOpacity>
-   
-    <TouchableOpacity
-      onPress={() => navigation.navigate('SalesHistory')}
-      style={{ marginRight: 12 }}
-    >
-      <MaterialCommunityIcons
-        name="history"
-        size={22}
-        color="#007aff"
-      />
-    </TouchableOpacity>
-    </>
+    <View style={styles.container}>
+      {/* Khata */}
+      <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
+        <TouchableOpacity
+          style={[styles.btn, styles.remindBtn]}
+          onPress={() => navigation.navigate('CreditLedger')}
+          activeOpacity={0.85}
+        >
+          <MaterialCommunityIcons
+            name="book-open-variant"
+            size={16}
+            color={Colors.primary}
+          />
+          <Text style={styles.remindText}>Khata</Text>
+        </TouchableOpacity>
+      </Animated.View>
+
+      {/* Sales History */}
+      <TouchableOpacity
+        style={[styles.btn, styles.payBtn]}
+        onPress={() => navigation.navigate('SalesHistory')}
+        activeOpacity={0.85}
+      >
+        <MaterialCommunityIcons
+          name="history"
+          size={16}
+          color={Colors.surface}
+        />
+        <Text style={styles.payText}>History</Text>
+      </TouchableOpacity>
+    </View>
   );
 };
 
-export default SalesHistoryButton;
+export default SellHeaderActions;
+
+const styles = StyleSheet.create({
+  container: {
+    flexDirection: 'row',
+    gap: 8,
+    marginRight: 8,
+  },
+
+  btn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+
+  /** matches what you sent **/
+  payBtn: {
+    backgroundColor: Colors.success,
+  },
+
+  remindBtn: {
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primary + '12',
+  },
+
+  payText: {
+    color: Colors.surface,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+
+  remindText: {
+    color: Colors.primary,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+});

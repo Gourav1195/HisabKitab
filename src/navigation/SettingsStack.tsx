@@ -6,6 +6,8 @@ import AppInfoScreen from '../screens/Settings/AppInfoScreen';
 import DangerZoneScreen from '../screens/Settings/DangerZoneScreen';
 import ArchivedItemsScreen from '../screens/Settings/ArchivedItemScreen';
 import ProScreen from '../screens/ProScreen';
+import ProfileScreen from '../screens/Settings/ProfileScreen';
+import BackupScreen from '../screens/Settings/BackupScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -20,7 +22,7 @@ const SettingsStack = () => {
       <Stack.Screen
         name="DataSettings"
         component={DataSettingsScreen}
-        options={{ title: 'Data & Backup' }}
+        options={{ title: 'Download Data in Excel' }}
       />
       <Stack.Screen
         name="AppInfo"
@@ -41,6 +43,16 @@ const SettingsStack = () => {
         name="Pro"
         component={ProScreen}
         options={{ title: 'Upgrade' }}
+      />
+      <Stack.Screen
+        name="Profile"
+        component={ProfileScreen}
+        options={{ title: 'Profile' }}
+      />
+      <Stack.Screen
+        name="Backup"
+        component={BackupScreen}
+        options={{ title: 'Backup & Restore' }}
       />
 
     </Stack.Navigator>

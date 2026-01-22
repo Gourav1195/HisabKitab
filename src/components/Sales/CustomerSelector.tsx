@@ -16,43 +16,67 @@ import { Colors } from '../../theme/Colors';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { getDB } from '../../db';
 import {  getContacts, formatContactForCustomer } from '../../utils/contactUtils';
+import { updateCustomerPhone } from '../../repo/creditRepo';
 
 interface Customer {
   id: number;
   name: string;
   phone: string;
 }
-
 interface ContactItem {
   id: string;
   name: string;
   phone: string;
   rawContact: any;
 }
+interface CustomerFormProps {
+  initialValues?: {
+    name: string;
+    phone: string;
+  };
+  submitLabel?: string;
+  onSubmit: (values: { name: string; phone: string }) => void;
+  onCancel: () => void;
+}
+type Mode = 'select' | 'add' | 'edit' | 'import';
 
 interface CustomerSelectorProps {
   selectedCustomerId?: number;
   onSelectCustomer: (customer: Customer | null) => void;
+  autoOpen?: boolean;
 }
 
 const CustomerSelector: React.FC<CustomerSelectorProps> = ({ 
-  onSelectCustomer
+  selectedCustomerId,
+  onSelectCustomer,
+  autoOpen = false,
 }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  // const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [loading, setLoading] = useState(false);
   const [newCustomer, setNewCustomer] = useState({ name: '', phone: '' });
-  const [mode, setMode] = useState<'select' | 'add' | 'import'>('select');
+  const [mode, setMode] = useState<Mode>('select');
   const [contacts, setContacts] = useState<ContactItem[]>([]);
   const [loadingContacts, setLoadingContacts] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
 
   useEffect(() => {
     if (modalVisible) {
       loadCustomers();
     }
   }, [modalVisible]);
+  useEffect(() => {
+    if (autoOpen) {
+      setModalVisible(true);
+    }
+  }, [autoOpen]);
+
+  const selectedCustomer = React.useMemo(() => {
+    if (!selectedCustomerId) return null;
+    return customers.find(c => c.id === selectedCustomerId) ?? null;
+  }, [selectedCustomerId, customers]);
 
   const loadCustomers = async () => {
     try {
@@ -102,6 +126,70 @@ const CustomerSelector: React.FC<CustomerSelectorProps> = ({
       setLoading(false);
     }
   };
+  
+  const renderEditMode = () => (
+  <View style={styles.modalContent}>
+    <Text style={styles.modalTitle}>Update Customer</Text>
+
+    {/* Name locked on purpose */}
+    <TextInput
+      value={newCustomer.name}
+      editable={false}
+      style={[styles.input, { opacity: 0.6 }]}
+    />
+
+    <TextInput
+      placeholder="Phone Number *"
+      value={newCustomer.phone}
+      onChangeText={(text) =>
+        setNewCustomer(prev => ({ ...prev, phone: text }))
+      }
+      style={styles.input}
+      keyboardType="phone-pad"
+      autoFocus
+    />
+
+    <View style={styles.buttonRow}>
+      <TouchableOpacity
+        style={[styles.button, styles.cancelButton]}
+        onPress={() => {
+          setEditingCustomer(null);
+          setMode('select');
+        }}
+      >
+        <Text style={styles.cancelButtonText}>Cancel</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[styles.button, styles.addButton]}
+        onPress={handleUpdateCustomer}
+      >
+        <Text style={styles.addButtonText}>Save</Text>
+      </TouchableOpacity>
+    </View>
+  </View>
+);
+
+  const handleUpdateCustomer = async () => {
+    if (!newCustomer.phone.trim()) {
+      Alert.alert('Phone required');
+      return;
+    }
+
+    await updateCustomerPhone(editingCustomer!.id, newCustomer.phone.trim());
+
+    const updated = {
+      ...editingCustomer!,
+      phone: newCustomer.phone.trim(),
+    };
+
+    onSelectCustomer(updated);
+
+    setEditingCustomer(null);
+    setMode('select');
+    setModalVisible(false);
+  };
+
 
   const loadContacts = async () => {
     try {
@@ -185,7 +273,6 @@ const CustomerSelector: React.FC<CustomerSelectorProps> = ({
       setCustomers(prev => [...prev, addedCustomer]);
       
       // Select the new customer
-      setSelectedCustomer(addedCustomer);
       onSelectCustomer(addedCustomer);
       
       // Reset and close
@@ -200,15 +287,22 @@ const CustomerSelector: React.FC<CustomerSelectorProps> = ({
   };
 
   const handleSelectCustomer = (customer: Customer) => {
-    setSelectedCustomer(customer);
-    onSelectCustomer(customer);
-    setModalVisible(false);
-  };
+  if (!customer.phone) {
+    setEditingCustomer(customer);
+    setNewCustomer({ name: customer.name, phone: '' });
+    setMode('edit');
+    return;
+  }
+
+  onSelectCustomer(customer);
+  setModalVisible(false);
+};
+
 
   const handleClearCustomer = () => {
-    setSelectedCustomer(null);
     onSelectCustomer(null);
   };
+
 
   const renderSelectMode = () => (
     <View style={styles.modalContent}>
@@ -432,11 +526,14 @@ const CustomerSelector: React.FC<CustomerSelectorProps> = ({
     switch (mode) {
       case 'add':
         return renderAddMode();
+      case 'edit':
+        return renderEditMode();
       case 'import':
         return renderImportMode();
       default:
         return renderSelectMode();
     }
+
   };
 
   return (
@@ -482,9 +579,10 @@ const CustomerSelector: React.FC<CustomerSelectorProps> = ({
           <View style={styles.modalContainer}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>
-                {mode === 'add' ? 'Add Customer' : 
-                 mode === 'import' ? 'Import from Contacts' : 
-                 'Select Customer'}
+                {mode === 'add' && 'Add Customer'}
+                {mode === 'edit' && 'Update Customer'}
+                {mode === 'import' && 'Import from Contacts'}
+                {mode === 'select' && 'Select Customer'}
               </Text>
               <TouchableOpacity 
                 onPress={() => {

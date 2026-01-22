@@ -7,12 +7,11 @@ export const CREATE_ITEMS_TABLE = `
   sell_price REAL,
   buy_price REAL,
   quantity INTEGER NOT NULL DEFAULT 0,
-  quantity_left INTEGER NOT NULL DEFAULT 0,     -- cached live stock
+  quantity_left INTEGER NOT NULL DEFAULT 0,    
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL,
   low_stock_threshold INTEGER NOT NULL DEFAULT 0,
   is_deleted INTEGER NOT NULL DEFAULT 0
-  
     );
 `;
 
@@ -41,7 +40,7 @@ export const CREATE_SALE_ITEMS_TABLE = `
 
 export const CREATE_PROFILE_TABLE = `
   CREATE TABLE IF NOT EXISTS profile (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id TEXT PRIMARY KEY,
     shop_name TEXT,
     phone TEXT,
     created_at INTEGER,
@@ -58,6 +57,7 @@ export const CREATE_CUSTOMER_TABLE = `
     is_deleted INTEGER NOT NULL DEFAULT 0
   );
 `;
+
 export const CREATE_LEDGER_TABLE = `
  CREATE TABLE IF NOT EXISTS ledger (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -70,3 +70,24 @@ export const CREATE_LEDGER_TABLE = `
   created_at INTEGER NOT NULL,
   FOREIGN KEY (customer_id) REFERENCES customers(id)
 );`;
+
+export const CREATE_STOCK_MOVEMENTS_TABLE = `
+ CREATE TABLE IF NOT EXISTS stock_movements (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  item_id INTEGER NOT NULL,
+  action TEXT NOT NULL,         -- RESTOCK | SALE | SET
+  quantity INTEGER NOT NULL,
+  note TEXT,
+  created_at INTEGER NOT NULL
+);`;
+
+export const CREATE_BACKUP_TABLE = `
+ CREATE TABLE IF NOT EXSITS backups (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  payload jsonb NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  app_version text NOT NULL,
+  type text NOT NULL CHECK (type IN ('AUTO', 'MANUAL'))
+);
+`;  

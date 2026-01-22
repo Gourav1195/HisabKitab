@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   TextInput,
@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Alert,
   Text,
+  Animated,
 } from 'react-native';
 import { Colors, Spacing, Typography, BorderRadius } from '../../theme/Colors';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -20,8 +21,26 @@ const AddItemForm: React.FC<AddItemFormProps> = ({ onItemAdded }) => {
   const [price, setPrice] = useState('');
   const [isAdding, setIsAdding] = useState(false);
 
+  const nameScale = useRef(new Animated.Value(1)).current;
+  const priceScale = useRef(new Animated.Value(1)).current;
+
+  const animateIn = (anim: Animated.Value) => {
+    Animated.spring(anim, {
+      toValue: 1.03,
+      useNativeDriver: true,
+      friction: 7,
+    }).start();
+  };
+
+  const animateOut = (anim: Animated.Value) => {
+    Animated.spring(anim, {
+      toValue: 1,
+      useNativeDriver: true,
+      friction: 7,
+    }).start();
+  };
+
   const handleAddItem = async () => {
-    // Validation
     if (!name.trim()) {
       Alert.alert('Required', 'Please enter item name');
       return;
@@ -38,147 +57,161 @@ const AddItemForm: React.FC<AddItemFormProps> = ({ onItemAdded }) => {
       return;
     }
 
-    if (priceNum > 1000000) {
-      Alert.alert('Price Too High', 'Maximum price is ₹10,00,000');
-      return;
-    }
-
     setIsAdding(true);
 
     try {
       const db = getDB();
       const now = Date.now();
 
-      console.log('Inserting item:', {
-        name: name.trim(),
-        sell_price: priceNum,
-        now
-      });
-
-      // Fixed INSERT statement - removed extra column
       const result = db.execute(
-        `INSERT INTO items 
+        `INSERT INTO items
          (name, sell_price, quantity, quantity_left, created_at, updated_at, low_stock_threshold)
          VALUES (?, ?, 0, 0, ?, ?, 5)`,
         [name.trim(), priceNum, now, now]
       );
 
-      console.log('Insert result:', result);
-
-      // Check if insertion was successful
       if (result.rowsAffected > 0 || result.insertId) {
-        // Reset form
         setName('');
         setPrice('');
-        
-        // Notify parent to refresh
         onItemAdded();
-        
-        Alert.alert('Success', 'Item added successfully');
       } else {
-        throw new Error('Insert failed - no rows affected');
+        throw new Error('Insert failed');
       }
     } catch (error: any) {
-      console.error('Failed to add item:', error);
-      Alert.alert('Error', `Failed to add item: ${error?.message || 'Unknown error'}`);
+      Alert.alert('Error', error?.message || 'Failed to add item');
     } finally {
       setIsAdding(false);
     }
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.formRow}>
-        <TextInput
-          placeholder="Item name"
-          placeholderTextColor={Colors.textLight}
-          value={name}
-          onChangeText={setName}
-          style={[styles.input, styles.nameInput]}
-          maxLength={50}
-          returnKeyType="next"
-        />
-        
-        <TextInput
-          placeholder="₹ Price"
-          placeholderTextColor={Colors.textLight}
-          value={price}
-          onChangeText={setPrice}
-          style={[styles.input, styles.priceInput]}
-          keyboardType="decimal-pad"
-          maxLength={10}
-          returnKeyType="done"
-          onSubmitEditing={handleAddItem}
-        />
-        
-        <TouchableOpacity
-          style={[
-            styles.addButton,
-            (!name.trim() || !price.trim() || isAdding) && styles.addButtonDisabled
-          ]}
-          onPress={handleAddItem}
-          disabled={!name.trim() || !price.trim() || isAdding}
-        >
-          {isAdding ? (
-            <Text style={styles.addButtonText}>...</Text>
-          ) : (
-            <MaterialCommunityIcons
-              name="plus"
-              size={18}
-              color={Colors.textInverse}
+    <View style={styles.wrapper}>
+      <Text style={styles.sectionTitle}>Add Item</Text>
+
+      <View style={styles.container}>
+        <View style={styles.formRow}>
+          <Animated.View style={{ flex: 2, transform: [{ scale: nameScale }] }}>
+            <TextInput
+              placeholder="Item name"
+              placeholderTextColor={Colors.textLight}
+              value={name}
+              onChangeText={setName}
+              style={[styles.input, styles.nameInput]}
+              maxLength={50}
+              returnKeyType="next"
+              onFocus={() => animateIn(nameScale)}
+              onBlur={() => animateOut(nameScale)}
             />
-          )}
-        </TouchableOpacity>
+          </Animated.View>
+
+          <Animated.View style={{ flex: 1, transform: [{ scale: priceScale }] }}>
+            <TextInput
+              placeholder="₹ Price"
+              placeholderTextColor={Colors.textLight}
+              value={price}
+              onChangeText={setPrice}
+              style={[styles.input, styles.priceInput]}
+              keyboardType="decimal-pad"
+              maxLength={10}
+              returnKeyType="done"
+              onSubmitEditing={handleAddItem}
+              onFocus={() => animateIn(priceScale)}
+              onBlur={() => animateOut(priceScale)}
+            />
+          </Animated.View>
+
+          <TouchableOpacity
+            style={[
+              styles.addButton,
+              (!name.trim() || !price.trim() || isAdding) && styles.addButtonDisabled,
+            ]}
+            onPress={handleAddItem}
+            disabled={!name.trim() || !price.trim() || isAdding}
+            activeOpacity={0.85}
+          >
+            {isAdding ? (
+              <Text style={styles.addButtonText}>…</Text>
+            ) : (
+              <MaterialCommunityIcons
+                name="plus"
+                size={20}
+                color={Colors.textInverse}
+              />
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
+  wrapper: {
+    backgroundColor: Colors.surface,
+    paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.lg, // 👈 makes it feel like a section
+    borderBottomWidth: 1,
+    borderColor: Colors.borderLight,
+  },
+
+  sectionTitle: {
+    fontSize: Typography.fontSize.sm,
+    fontWeight: '700',
+    color: Colors.textSecondary,
+    marginBottom: Spacing.sm,
+    letterSpacing: 0.5,
+  },
+
   container: {
     backgroundColor: Colors.surface,
-    borderBottomWidth: 1,
-    borderColor: Colors.border,
-    padding: Spacing.md,
   },
+
   formRow: {
     flexDirection: 'row',
-    gap: Spacing.sm,
     alignItems: 'center',
+    gap: Spacing.md,
   },
+
   input: {
-    height: 36,
+    height: 44, // 👈 taller = less cramped
     borderWidth: 1,
     borderColor: Colors.border,
-    borderRadius: BorderRadius.md,
+    borderRadius: BorderRadius.lg,
     paddingHorizontal: Spacing.md,
     fontSize: Typography.fontSize.md,
     color: Colors.textPrimary,
     backgroundColor: Colors.background,
   },
+
   nameInput: {
     flex: 2,
   },
+
   priceInput: {
     flex: 1,
     textAlign: 'right',
   },
+
   addButton: {
-    width: 36,
-    height: 36,
+    width: 44,   // 👈 matches input height
+    height: 44,
     backgroundColor: Colors.primary,
-    borderRadius: BorderRadius.md,
+    borderRadius: BorderRadius.lg,
     justifyContent: 'center',
     alignItems: 'center',
   },
+
   addButtonDisabled: {
-    backgroundColor: Colors.textLight,
+    backgroundColor: Colors.border,
   },
+
   addButtonText: {
     color: Colors.textInverse,
     fontSize: Typography.fontSize.lg,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
 });
+
 
 export default AddItemForm;

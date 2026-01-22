@@ -9,7 +9,6 @@ import {
 } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { Colors } from '../../theme/Colors';
-import { format } from 'date-fns';
 
 interface CustomerListProps {
   customers: any[];
@@ -17,6 +16,9 @@ interface CustomerListProps {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   handleCustomerPress: (customer: any) => void;
+
+  onPayCredit: (customer: any) => void;
+  onRemindCustomer: (customer: any) => void;
 }
 
 const CustomerList: React.FC<CustomerListProps> = ({
@@ -24,144 +26,216 @@ const CustomerList: React.FC<CustomerListProps> = ({
   searchQuery,
   setSearchQuery,
   handleCustomerPress,
+  onPayCredit,
+  onRemindCustomer,
 }) => {
   const formatCurrency = (amount: number) => {
-    return `₹${amount.toFixed(2)}`;
+    return `₹${amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
-  const formatDate = (timestamp: number) => {
-    return format(new Date(timestamp), 'dd MMM yyyy, hh:mm a');
+  const getDaysAgo = (timestamp: number) => {
+    const days = Math.floor((Date.now() - timestamp) / (1000 * 60 * 60 * 24));
+    if (days === 0) return 'Today';
+    if (days === 1) return 'Yesterday';
+    return `${days}d`;
   };
 
-  const renderCustomerItem = ({ item }: { item: any }) => (
-    <TouchableOpacity
-      style={[
-        styles.customerCard,
-        item.remainingBalance > 0 && styles.overdueCard
-      ]}
-      onPress={() => handleCustomerPress(item)}
-    >
-      <View style={styles.customerHeader}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>
-            {item.name.charAt(0).toUpperCase()}
-          </Text>
-        </View>
-        <View style={styles.customerInfo}>
-          <Text style={styles.customerName} numberOfLines={1}>
-            {item.name}
-          </Text>
-          {item.phone ? (
-            <Text style={styles.customerPhone}>{item.phone}</Text>
-          ) : null}
-          <Text style={styles.lastTransaction}>
-            Last: {formatDate(item.lastTransactionDate)}
-          </Text>
-        </View>
-        <MaterialCommunityIcons
-          name="chevron-right"
-          size={24}
-          color={Colors.textLight}
-        />
-      </View>
-
-      <View style={styles.amountsContainer}>
-        <View style={styles.amountItem}>
-          <Text style={styles.amountLabel}>Credit</Text>
-          <Text style={styles.creditAmount}>
-            {formatCurrency(item.totalCredit)}
-          </Text>
-        </View>
-        <View style={styles.amountItem}>
-          <Text style={styles.amountLabel}>Paid</Text>
-          <Text style={styles.paidAmount}>
-            {formatCurrency(item.totalPaid)}
-          </Text>
-        </View>
-        <View style={styles.amountItem}>
-          <Text style={styles.amountLabel}>Remaining</Text>
-          <Text style={[
-            styles.remainingAmount,
-            item.remainingBalance > 0 ? styles.overdueAmount : styles.settledAmount
-          ]}>
-            {formatCurrency(item.remainingBalance)}
-          </Text>
-        </View>
-      </View>
-
-      {item.remainingBalance > 0 && (
-        <View style={styles.overdueBadge}>
-          <MaterialCommunityIcons name="alert" size={12} color={Colors.error} />
-          <Text style={styles.overdueText}>OVERDUE</Text>
-        </View>
-      )}
-    </TouchableOpacity>
-  );
+  const renderCustomerItem = ({ item }: { item: any }) => {
+  const hasDue = item.remainingBalance > 0;
 
   return (
-    <>
-      <View style={styles.searchContainer}>
-        <MaterialCommunityIcons name="magnify" size={20} color={Colors.textLight} />
+    <TouchableOpacity
+      activeOpacity={0.85}
+      onPress={() => handleCustomerPress(item)}
+      style={[
+        compactStyles.row,
+        hasDue && compactStyles.overdueRow,
+      ]}
+    >
+      {/* avatar */}
+      <View style={[
+        compactStyles.avatar,
+        { backgroundColor: hasDue ? Colors.error + '18' : Colors.success + '12' }
+      ]}>
+        <Text style={[
+          compactStyles.avatarText,
+          { color: hasDue ? Colors.error : Colors.success }
+        ]}>
+          {item.name?.charAt(0)?.toUpperCase() || '?'}
+        </Text>
+      </View>
+
+      {/* middle */}
+      <View style={compactStyles.middle}>
+        <Text style={compactStyles.name} numberOfLines={1}>
+          {item.name}
+        </Text>
+
+        <View style={compactStyles.metaRow}>
+          <Text style={compactStyles.metaText}>
+            {item.phone || 'No phone'}
+          </Text>
+          <Text style={compactStyles.dot}>•</Text>
+          <Text style={compactStyles.metaText}>
+            {getDaysAgo(item.lastTransactionDate)}
+          </Text>
+        </View>
+
+        {/* ACTION BUTTONS */}
+        {hasDue && (
+          <View style={compactStyles.actionsRow}>
+            <TouchableOpacity
+              style={[compactStyles.actionBtn, compactStyles.payBtn]}
+              onPress={() => onPayCredit(item)}
+            >
+              <MaterialCommunityIcons name="cash-check" size={14} color={Colors.surface} />
+              <Text style={compactStyles.payText}>Pay</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[compactStyles.actionBtn, compactStyles.remindBtn]}
+              onPress={() => onRemindCustomer(item)}
+            >
+              <MaterialCommunityIcons name="bell-outline" size={14} color={Colors.primary} />
+              <Text style={compactStyles.remindText}>Remind</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+
+      {/* right */}
+      <View style={compactStyles.right}>
+        <Text style={[
+          compactStyles.remaining,
+          hasDue ? compactStyles.remainingWarn : compactStyles.remainingSettled
+        ]}>
+          {formatCurrency(item.remainingBalance)}
+        </Text>
+      </View>
+
+      <MaterialCommunityIcons name="chevron-right" size={18} color={Colors.textLight} />
+    </TouchableOpacity>
+  );
+};
+
+
+  return (
+    <View style={compactStyles.container}>
+      {/* header */}
+      <View style={compactStyles.header}>
+        <Text style={compactStyles.title}>Customer Records</Text>
+        <View style={compactStyles.countBadge}>
+          <Text style={compactStyles.countText}>
+            {filteredCustomers.length} {filteredCustomers.length === 1 ? 'customer' : 'customers'}
+          </Text>
+        </View>
+      </View>
+
+      {/* search */}
+      <View style={compactStyles.searchRow}>
+        <MaterialCommunityIcons name="magnify" size={18} color={Colors.primary} />
         <TextInput
-          style={styles.searchInput}
-          placeholder="Search customers by name or phone..."
+          style={compactStyles.searchInput}
+          placeholder="Search by name or phone..."
+          placeholderTextColor={Colors.textLight}
           value={searchQuery}
           onChangeText={setSearchQuery}
-          placeholderTextColor={Colors.textLight}
+          returnKeyType="search"
         />
         {searchQuery ? (
           <TouchableOpacity onPress={() => setSearchQuery('')}>
-            <MaterialCommunityIcons name="close-circle" size={20} color={Colors.textLight} />
+            <MaterialCommunityIcons name="close-circle" size={18} color={Colors.textLight} />
           </TouchableOpacity>
         ) : null}
       </View>
 
-      <View style={styles.listHeader}>
-        <Text style={styles.listTitle}>
-          All Customers ({filteredCustomers.length})
-        </Text>
-        <Text style={styles.listSubtitle}>
-          Total Due: ₹{filteredCustomers.reduce((sum, c) => sum + c.remainingBalance, 0).toLocaleString()}
-        </Text>
+      {/* summary banner (kept compact) */}
+      <View style={compactStyles.summary}>
+        <View style={compactStyles.summaryItem}>
+          <Text style={compactStyles.summaryLabel}>Total Due</Text>
+          <Text style={compactStyles.summaryValue}>
+            ₹{filteredCustomers.reduce((s, c) => s + c.remainingBalance, 0)
+              .toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </Text>
+        </View>
+        <View style={compactStyles.summaryDivider} />
+        <View style={compactStyles.summaryItem}>
+          <Text style={compactStyles.summaryLabel}>Overdue</Text>
+          <Text style={[compactStyles.summaryValue, { color: Colors.error }]}>
+            {filteredCustomers.filter(c => c.remainingBalance > 0).length}
+          </Text>
+        </View>
+        <View style={compactStyles.summaryDivider} />
+        <View style={compactStyles.summaryItem}>
+          <Text style={compactStyles.summaryLabel}>Settled</Text>
+          <Text style={[compactStyles.summaryValue, { color: Colors.success }]}>
+            {filteredCustomers.filter(c => c.remainingBalance === 0).length}
+          </Text>
+        </View>
       </View>
 
+      {/* list */}
       {filteredCustomers.length === 0 ? (
-        <View style={styles.emptyState}>
-          <MaterialCommunityIcons
-            name="credit-card-off"
-            size={64}
-            color={Colors.textLight}
-          />
-          <Text style={styles.emptyText}>
-            {searchQuery ? 'No customers found' : 'No credit records found'}
+        <View style={compactStyles.empty}>
+          <MaterialCommunityIcons name={searchQuery ? "account-search" : "credit-card-off"} size={64} color={Colors.textLight + '40'} />
+          <Text style={compactStyles.emptyTitle}>
+            {searchQuery ? 'No matching customers' : 'No credit records yet'}
           </Text>
-          {!searchQuery && (
-            <Text style={styles.emptySubtext}>
-              Sales marked as credit will appear here
-            </Text>
-          )}
         </View>
       ) : (
         <FlatList
           data={filteredCustomers}
           renderItem={renderCustomerItem}
           keyExtractor={(item) => item.id.toString()}
-          scrollEnabled={false}
-          contentContainerStyle={styles.listContainer}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={compactStyles.list}
+          ItemSeparatorComponent={() => <View style={compactStyles.separator} />}
         />
       )}
-    </>
+    </View>
   );
 };
 
-const styles = StyleSheet.create({
-  searchContainer: {
+const compactStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: Colors.background,
+    paddingTop: 8,
+  },
+
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.surface,
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+  },
+  countBadge: {
+    backgroundColor: Colors.primary + '12',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.primary + '20',
+  },
+  countText: {
+    color: Colors.primary,
+    fontWeight: '600',
+    fontSize: 13,
+  },
+
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginHorizontal: 16,
-    marginVertical: 8,
-    paddingHorizontal: 12,
+    marginBottom: 12,
+    backgroundColor: Colors.surface,
+    paddingHorizontal: 10,
     paddingVertical: 8,
     borderRadius: 12,
     borderWidth: 1,
@@ -173,146 +247,214 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.textPrimary,
   },
-  listHeader: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+
+  summary: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    marginHorizontal: 16,
+    marginBottom: 12,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
     alignItems: 'center',
   },
-  listTitle: {
-    fontSize: 18,
+  summaryItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  summaryDivider: {
+    width: 1,
+    height: 36,
+    backgroundColor: Colors.borderLight,
+  },
+  summaryLabel: {
+    fontSize: 11,
     fontWeight: '600',
-    color: Colors.textPrimary,
-  },
-  listSubtitle: {
-    fontSize: 14,
     color: Colors.textSecondary,
-    fontWeight: '500',
   },
-  listContainer: {
-    paddingHorizontal: 16,
-    paddingBottom: 20,
+  summaryValue: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: Colors.textPrimary,
+    marginTop: 4,
   },
-  customerCard: {
+
+  list: {
+    paddingHorizontal: 8,
+    paddingBottom: 24,
+  },
+
+  separator: {
+    height: 8,
+  },
+
+  /* compact row */
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     backgroundColor: Colors.surface,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    marginHorizontal: 8,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: Colors.borderLight,
   },
-  overdueCard: {
-    borderColor: Colors.errorLight,
-    backgroundColor: Colors.errorLight + '10',
+  overdueRow: {
+    borderColor: Colors.error + '30',
+    backgroundColor: Colors.error + '03',
   },
-  customerHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
+
   avatar: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
+    position: 'relative',
   },
   avatarText: {
-    color: Colors.surface,
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  customerInfo: {
-    flex: 1,
-  },
-  customerName: {
     fontSize: 16,
-    fontWeight: '600',
-    color: Colors.textPrimary,
-    marginBottom: 2,
+    fontWeight: '800',
   },
-  customerPhone: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    marginBottom: 4,
-  },
-  lastTransaction: {
-    fontSize: 12,
-    color: Colors.textLight,
-  },
-  amountsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    borderTopWidth: 1,
-    borderTopColor: Colors.borderLight,
-    paddingTop: 12,
-  },
-  amountItem: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  amountLabel: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    marginBottom: 4,
-  },
-  creditAmount: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.error,
-  },
-  paidAmount: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.success,
-  },
-  remainingAmount: {
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  overdueAmount: {
-    color: Colors.error,
-  },
-  settledAmount: {
-    color: Colors.success,
-  },
-  overdueBadge: {
+  smallCheck: {
     position: 'absolute',
-    top: 12,
-    right: 12,
+    bottom: -4,
+    right: -4,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: Colors.success,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: Colors.surface,
+  },
+
+  middle: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  nameRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.error + '20',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
   },
-  overdueText: {
-    fontSize: 10,
+  name: {
+    fontSize: 15,
     fontWeight: '700',
+    color: Colors.textPrimary,
+    flex: 1,
+  },
+  criticalPill: {
+    marginLeft: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 8,
+    backgroundColor: Colors.error + '12',
+  },
+  criticalText: {
+    fontSize: 10,
+    fontWeight: '800',
     color: Colors.error,
     marginLeft: 4,
   },
-  emptyState: {
+
+  metaRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 60,
-    paddingHorizontal: 20,
+    marginTop: 4,
   },
-  emptyText: {
-    fontSize: 18,
-    color: Colors.textSecondary,
-    marginTop: 16,
-    textAlign: 'center',
-  },
-  emptySubtext: {
-    fontSize: 14,
+  metaText: {
+    fontSize: 12,
     color: Colors.textLight,
-    marginTop: 8,
-    textAlign: 'center',
   },
+  dot: {
+    marginHorizontal: 6,
+    color: Colors.textLight,
+    fontSize: 12,
+  },
+
+  right: {
+    alignItems: 'flex-end',
+    marginRight: 8,
+    marginLeft: 8,
+  },
+  remaining: {
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  remainingWarn: {
+    color: Colors.warning,
+  },
+  remainingSettled: {
+    color: Colors.success,
+  },
+  smallAmounts: {
+    marginTop: 6,
+    alignItems: 'flex-end',
+  },
+  smallAmountCredit: {
+    fontSize: 11,
+    color: Colors.error,
+    fontWeight: '700',
+  },
+  smallAmountPaid: {
+    fontSize: 11,
+    color: Colors.success,
+    fontWeight: '700',
+  },
+
+  empty: {
+    alignItems: 'center',
+    paddingTop: 80,
+  },
+  emptyTitle: {
+    marginTop: 12,
+    fontSize: 16,
+    color: Colors.textSecondary,
+    fontWeight: '700',
+  },
+  actionsRow: {
+  flexDirection: 'row',
+  marginTop: 6,
+  gap: 8,
+},
+
+actionBtn: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 4,
+  paddingHorizontal: 8,
+  paddingVertical: 6,
+  borderRadius: 8,
+},
+
+payBtn: {
+  backgroundColor: Colors.success,
+},
+
+remindBtn: {
+  borderWidth: 1,
+  borderColor: Colors.primary,
+  backgroundColor: Colors.primary + '12',
+},
+
+payText: {
+  color: Colors.surface,
+  fontSize: 12,
+  fontWeight: '700',
+},
+
+remindText: {
+  color: Colors.primary,
+  fontSize: 12,
+  fontWeight: '700',
+},
+
 });
 
 export default CustomerList;

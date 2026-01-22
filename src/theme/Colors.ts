@@ -1,49 +1,51 @@
 // theme/Colors.ts
 export const Colors = {
-  // Green Theme
-  primary: '#10B981',
-  primaryLight: '#34D399',
-  primaryLighter: '#D1FAE5',
-  primaryDark: '#059669',
-  primaryDarker: '#047857',
-  
-  secondary: '#3B82F6',
-  secondaryLight: '#60A5FA',
-  secondaryLighter: '#DBEAFE',
-  secondaryDark: '#2563EB',
-  secondaryDarker: '#1D4ED8',
+  /* ===== Core Brand (Muted Premium Green) ===== */
+  primary: '#1F7A68',          // deep jade green
+  primaryLight: '#4FA89A',
+  primaryLighter: '#E6F3F0',
+  primaryDark: '#145E50',
+  primaryDarker: '#0F4A3F',
 
-  
-  // Inventory specific
-  stockGood: '#3B82F6',      // Blue for good stock
-  stockLow: '#EF4444',       // Red for low stock
-  stockOut: '#DC2626',       // Darker red for out of stock
-  stockUntracked: '#6B7280', // Grey for no tracking
-  
-  // Backgrounds
-  background: '#F9FAFB',
+  /* ===== Accent / Ink Blue (for Khata, links, history) ===== */
+  secondary: '#2E3A59',        // ink navy
+  secondaryLight: '#55607A',
+  secondaryLighter: '#E9ECF1',
+  secondaryDark: '#1F293D',
+  secondaryDarker: '#161E2E',
+
+  /* ===== Stock Status (UNCHANGED – you were right) ===== */
+  stockOk: '#6B7280',
+  stockLow: '#C7923E',
+  stockOut: '#9B6A6A',
+
+  /* ===== Backgrounds (Paper-like) ===== */
+  background: '#F7F8FA',       // soft off-white
   surface: '#FFFFFF',
-  surfaceAlt: '#F3F4F6',
-  
-  // Text
-  textPrimary: '#111827',
-  textSecondary: '#6B7280',
+  surfaceAlt: '#F1F3F6',
+
+  /* ===== Text (Readable, serious) ===== */
+  textPrimary: '#111827',      // almost black
+  textSecondary: '#4B5563',    // darker gray than before
   textLight: '#9CA3AF',
   textInverse: '#FFFFFF',
-  
-  // Borders
-  border: '#E5E7EB',
-  borderLight: '#F3F4F6',
-  
-  // Status
-  success: '#10B981',
-  successLight: '#34D399',
-  warning: '#F59E0B',
-  warningLight: '#FBBF24',
-  error: '#EF4444',
-  errorLight: '#FCA5A5',
-  info: '#3B82F6',
-  infoLight: '#60A5FA',
+
+  /* ===== Borders ===== */
+  border: '#E1E4E8',
+  borderLight: '#EEF0F3',
+
+  /* ===== Status (Muted, non-alarming) ===== */
+  success: '#1F7A68',          // same as primary
+  successLight: '#4FA89A',
+
+  warning: '#B7791F',          // deeper amber, less yellow
+  warningLight: '#E3B341',
+
+  error: '#B4534B',            // muted brick red
+  errorLight: '#E5A3A0',
+
+  info: '#2E3A59',             // ink blue
+  infoLight: '#55607A',
 };
 
 export const Spacing = {

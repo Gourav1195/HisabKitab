@@ -27,7 +27,7 @@ const SellScreen = () => {
   const [cartHeight, setCartHeight] = useState(0);
   const [isCredit, setIsCredit] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
-  
+
   const [pricePrompt, setPricePrompt] = useState<{
     visible: boolean;
     mode: 'existing' | 'new';
@@ -74,15 +74,15 @@ const SellScreen = () => {
   const addItemToCart = (item: Item, price: number) => {
     setCart(prev => {
       const existing = prev[item.id];
-      
-      if (item.quantity_left && item.quantity_left > 0) {
-        const newQty = existing ? existing.qty + 1 : 1;
-        if (newQty > item.quantity_left) {
-          Alert.alert(`Only ${item.quantity_left} in stock`);
-          return prev;
-        }
-      }
-      
+
+      // if (item.quantity_left !== null && item.quantity_left !== undefined){
+      //   const newQty = existing ? existing.qty + 1 : 1;
+      //   if (newQty > item.quantity_left) {
+      //     Alert.alert(`Only ${item.quantity_left} in stock`);
+      //     return prev;
+      //   }
+      // }
+
       return {
         ...prev,
         [item.id]: {
@@ -135,7 +135,7 @@ const SellScreen = () => {
 
     if (pricePrompt.mode === 'existing') {
       addItemToCart(pricePrompt.item, price);
-      
+
       try {
         const db = getDB();
         const now = Date.now();
@@ -208,10 +208,10 @@ const SellScreen = () => {
 
   const insertLedgerEntry = (saleId: number, amount: number) => {
     if (!selectedCustomer) return;
-    
+
     const db = getDB();
     const now = Date.now();
-    
+
     // For credit sale, insert DEBIT entry (customer owes money)
     // For payment (future feature), would insert CREDIT entry (customer paid)
     db.execute(
@@ -221,7 +221,7 @@ const SellScreen = () => {
       [
         selectedCustomer.id,
         'SALE',
-        'DEBIT',  // Increases customer's balance (what they owe)
+        'DEBIT',  
         amount,
         saleId,
         now
@@ -239,7 +239,7 @@ const SellScreen = () => {
     const db = getDB();
     const now = Date.now();
     const cartItems = Object.values(cart);
-    
+
     if (cartItems.length === 0) return;
 
     db.execute('BEGIN TRANSACTION');
@@ -279,25 +279,25 @@ const SellScreen = () => {
       }
 
       db.execute('COMMIT');
-      
+
       // Show success message
       setSaleDone(true);
-      
+
       // Clear cart
       setCart({});
-      
+
       // Reset customer selection if credit sale
       if (isCredit) {
         setSelectedCustomer(null);
       }
-      
+
       // Refresh items
       loadItems();
-      
+
     } catch (e) {
       db.execute('ROLLBACK');
       Alert.alert(
-        'Sale failed', 
+        'Sale failed',
         e instanceof Error ? e.message : String(e)
       );
     }
@@ -305,14 +305,14 @@ const SellScreen = () => {
 
   const clearCart = () => {
     if (Object.keys(cart).length === 0) return;
-    
+
     Alert.alert(
       'Clear Cart',
       'Are you sure you want to clear all items from cart?',
       [
         { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Clear', 
+        {
+          text: 'Clear',
           style: 'destructive',
           onPress: () => setCart({})
         }
@@ -355,7 +355,6 @@ const SellScreen = () => {
       )}
 
       <View style={styles.header}>
-        <Text style={styles.headerText}>Sell</Text>
         <TouchableOpacity onPress={clearCart} disabled={Object.keys(cart).length === 0}>
           <Text style={[
             styles.clearCartText,
@@ -388,14 +387,16 @@ const SellScreen = () => {
         showQuickAdd={filteredItems.length === 0 && query.trim() !== ''}
       />
 
-      {filteredItems.length > 0 && (
-        <ItemList
-          items={filteredItems}
-          onAddItem={handleAddItem}
-          showAlphaIndex={SHOW_ALPHA_INDEX}
-          cartHeight={cartHeight}
-        />
-      )}
+      <View style={{ flex: 1 }}>
+        {filteredItems.length > 0 && (
+          <ItemList
+            items={filteredItems}
+            onAddItem={handleAddItem}
+            showAlphaIndex={SHOW_ALPHA_INDEX}
+            cartHeight={cartHeight}
+          />
+        )}
+      </View>
 
       <PricePrompt
         visible={pricePrompt.visible}
@@ -425,7 +426,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: Spacing.md,
-    paddingTop: Spacing.lg,
+    // paddingTop: Spacing.lg,
   },
   saleBackground: {
     backgroundColor: '#F9FAFB', // Light background for cash sales

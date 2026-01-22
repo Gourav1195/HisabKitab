@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { LineChart, BarChart, PieChart } from 'react-native-chart-kit';
-import { format } from 'date-fns';
+// import { format } from 'date-fns';
 import { Colors } from '../../theme/Colors';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -12,7 +12,6 @@ interface CreditDashboardProps {
   chartView: 'trend' | 'balance';
   setChartView: (view: 'trend' | 'balance') => void;
   timeRange: 'week' | 'month' | 'quarter' | 'year';
-  setTimeRange: (range: 'week' | 'month' | 'quarter' | 'year') => void;
   timeBuckets: any[];
   customers: any[];
 }
@@ -22,7 +21,6 @@ const CreditDashboard: React.FC<CreditDashboardProps> = ({
   chartView,
   setChartView,
   timeRange,
-//   setTimeRange,
   timeBuckets,
   customers,
 }) => {
@@ -30,29 +28,35 @@ const CreditDashboard: React.FC<CreditDashboardProps> = ({
     return `₹${amount.toFixed(2)}`;
   };
 
+  const safeNumber = (v: any) =>
+    typeof v === 'number' && !isNaN(v) ? v : 0;
+
   const renderCreditTrendChart = () => {
     if (timeBuckets.length === 0) return null;
 
-    const labels = timeBuckets.map(bucket => {
-      if (timeRange === 'week') {
-        return format(new Date(bucket.label), 'EEE');
-      } else if (timeRange === 'month') {
-        return `W${bucket.label.split('-')[1]}`;
-      } else {
-        return format(new Date(bucket.label + '-01'), 'MMM');
-      }
+   const labels = timeBuckets.map(bucket => {
+    switch (timeRange) {
+        case 'week':
+        return bucket.label; // already day-based
+        case 'month':
+        return `Week ${bucket.label.split('-')[1]}`;
+        case 'quarter':
+        case 'year':
+        default:
+        return bucket.label; // 'YYYY-MM'
+    }
     });
 
     const chartData = {
       labels: labels,
       datasets: [
         {
-          data: timeBuckets.map(b => b.totalCredit),
+          data: timeBuckets.map(b => safeNumber(b.totalCredit)),
           color: (opacity = 1) => `rgba(244, 67, 54, ${opacity})`,
           strokeWidth: 2,
         },
         {
-          data: timeBuckets.map(b => b.totalPaid),
+          data: timeBuckets.map(b => safeNumber(b.totalPaid)),
           color: (opacity = 1) => `rgba(76, 175, 80, ${opacity})`,
           strokeWidth: 2,
         }
@@ -73,13 +77,33 @@ const CreditDashboard: React.FC<CreditDashboardProps> = ({
 
     return (
       <View style={styles.chartContainer}>
-        <Text style={styles.chartTitle}>
-          {chartView === 'trend' ? 'Credit Trend' : 'Outstanding Balance'}
-        </Text>
+        <View style={styles.chartHeader}>
+          <Text style={styles.chartTitle}>
+            {chartView === 'trend' ? 'Credit Trend' : 'Outstanding Balance'}
+          </Text>
+          <View style={styles.chartToggle}>
+            <TouchableOpacity
+              style={[styles.chartToggleButton, chartView === 'trend' && styles.activeChartToggle]}
+              onPress={() => setChartView('trend')}
+            >
+              <Text style={[styles.chartToggleText, chartView === 'trend' && styles.activeChartToggleText]}>
+                Trend
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.chartToggleButton, chartView === 'balance' && styles.activeChartToggle]}
+              onPress={() => setChartView('balance')}
+            >
+              <Text style={[styles.chartToggleText, chartView === 'balance' && styles.activeChartToggleText]}>
+                Balance
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
         {chartView === 'trend' ? (
           <LineChart
             data={chartData}
-            width={screenWidth - 32}
+            width={screenWidth - 40}
             height={220}
             chartConfig={chartConfig}
             bezier
@@ -92,10 +116,10 @@ const CreditDashboard: React.FC<CreditDashboardProps> = ({
             data={{
               labels: labels,
               datasets: [{
-                data: timeBuckets.map(b => b.remaining)
+                data: timeBuckets.map(b => safeNumber(b.remaining))
               }]
             }}
-            width={screenWidth - 32}
+            width={screenWidth - 40}
             height={220}
             chartConfig={{
               ...chartConfig,
@@ -163,7 +187,7 @@ const CreditDashboard: React.FC<CreditDashboardProps> = ({
         <Text style={styles.chartTitle}>Payment Composition</Text>
         <PieChart
           data={pieData}
-          width={screenWidth - 32}
+          width={screenWidth - 40}
           height={180}
           chartConfig={chartConfig}
           accessor="amount"
@@ -200,7 +224,10 @@ const CreditDashboard: React.FC<CreditDashboardProps> = ({
 
     return (
       <View style={styles.topCustomersContainer}>
-        <Text style={styles.sectionTitle}>Top 5 Overdue Customers</Text>
+        <View style={styles.sectionHeader}>
+          <MaterialCommunityIcons name="alert-circle" size={20} color={Colors.error} />
+          <Text style={styles.sectionTitle}>Top 5 Overdue Customers</Text>
+        </View>
         {overdueCustomers.map((customer, index) => (
           <View key={customer.id} style={styles.topCustomerItem}>
             <View style={styles.rankBadge}>
@@ -208,7 +235,9 @@ const CreditDashboard: React.FC<CreditDashboardProps> = ({
             </View>
             <View style={styles.topCustomerInfo}>
               <Text style={styles.topCustomerName}>{customer.name}</Text>
-              <Text style={styles.topCustomerPhone}>{customer.phone}</Text>
+              {customer.phone && (
+                <Text style={styles.topCustomerPhone}>{customer.phone}</Text>
+              )}
             </View>
             <View style={styles.topCustomerAmounts}>
               <Text style={styles.topCustomerAmount}>
@@ -229,183 +258,161 @@ const CreditDashboard: React.FC<CreditDashboardProps> = ({
 
     return (
       <View style={styles.summaryContainer}>
-        <View style={styles.summaryCard}>
-          <MaterialCommunityIcons name="account-group" size={24} color={Colors.primary} />
-          <Text style={styles.summaryLabel}>Total Customers</Text>
+        <View style={[styles.summaryCard, { borderLeftColor: Colors.primary }]}>
+          <MaterialCommunityIcons name="account-group" size={20} color={Colors.primary} />
           <Text style={styles.summaryValue}>{summary.totalCustomers}</Text>
+          <Text style={styles.summaryLabel}>Customers</Text>
         </View>
 
-        <View style={styles.summaryCard}>
-          <MaterialCommunityIcons name="cash" size={24} color={Colors.success} />
-          <Text style={styles.summaryLabel}>Total Credit</Text>
+        <View style={[styles.summaryCard, { borderLeftColor: Colors.success }]}>
+          <MaterialCommunityIcons name="cash" size={20} color={Colors.success} />
           <Text style={styles.summaryValue}>{formatCurrency(summary.totalCredit)}</Text>
+          <Text style={styles.summaryLabel}>Total Credit</Text>
         </View>
 
-        <View style={styles.summaryCard}>
-          <MaterialCommunityIcons name="check-circle" size={24} color={Colors.info} />
-          <Text style={styles.summaryLabel}>Total Paid</Text>
+        <View style={[styles.summaryCard, { borderLeftColor: Colors.info }]}>
+          <MaterialCommunityIcons name="check-circle" size={20} color={Colors.info} />
           <Text style={styles.summaryValue}>{formatCurrency(summary.totalPaid)}</Text>
+          <Text style={styles.summaryLabel}>Total Paid</Text>
         </View>
 
-        <View style={[styles.summaryCard, styles.remainingCard]}>
-          <MaterialCommunityIcons name="alert-circle" size={24} color={Colors.warning} />
-          <Text style={styles.summaryLabel}>Remaining</Text>
+        <View style={[styles.summaryCard, { borderLeftColor: Colors.warning }]}>
+          <MaterialCommunityIcons name="alert-circle" size={20} color={Colors.warning} />
           <Text style={[styles.summaryValue, styles.remainingValue]}>
             {formatCurrency(summary.totalRemaining)}
           </Text>
+          <Text style={styles.summaryLabel}>Remaining</Text>
         </View>
       </View>
     );
   };
 
   return (
-    <>
+    <View style={styles.container}>
       {renderSummaryCards()}
-
-      <View style={styles.chartToggle}>
-        <TouchableOpacity
-          style={[styles.toggleButton, chartView === 'trend' && styles.activeToggle]}
-          onPress={() => setChartView('trend')}
-        >
-          <MaterialCommunityIcons 
-            name="chart-line" 
-            size={16} 
-            color={chartView === 'trend' ? Colors.surface : Colors.textSecondary} 
-          />
-          <Text style={[styles.toggleText, chartView === 'trend' && styles.activeToggleText]}>
-            Credit Trend
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.toggleButton, chartView === 'balance' && styles.activeToggle]}
-          onPress={() => setChartView('balance')}
-        >
-          <MaterialCommunityIcons 
-            name="chart-bar" 
-            size={16} 
-            color={chartView === 'balance' ? Colors.surface : Colors.textSecondary} 
-          />
-          <Text style={[styles.toggleText, chartView === 'balance' && styles.activeToggleText]}>
-            Outstanding
-          </Text>
-        </TouchableOpacity>
-      </View>
-
       {renderCreditTrendChart()}
       {renderCompositionPieChart()}
       {renderTopOverdueCustomers()}
-    </>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  container: {
+    paddingVertical: 16,
+  },
   summaryContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    padding: 12,
-    gap: 8,
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    gap: 12,
   },
   summaryCard: {
     flex: 1,
-    minWidth: '48%',
+    minWidth: '47%',
     backgroundColor: Colors.surface,
     borderRadius: 12,
     padding: 16,
-    alignItems: 'center',
+    borderLeftWidth: 4,
     borderWidth: 1,
     borderColor: Colors.borderLight,
-  },
-  remainingCard: {
-    backgroundColor: Colors.warningLight,
-    borderColor: Colors.warning,
+    alignItems: 'center',
   },
   summaryLabel: {
     fontSize: 12,
     color: Colors.textSecondary,
-    marginTop: 8,
+    marginTop: 6,
     textAlign: 'center',
   },
   summaryValue: {
     fontSize: 18,
     fontWeight: '700',
     color: Colors.textPrimary,
-    marginTop: 4,
+    marginTop: 8,
   },
   remainingValue: {
     color: Colors.warning,
   },
-  chartToggle: {
-    flexDirection: 'row',
-    marginHorizontal: 16,
-    marginTop: 8,
-    backgroundColor: Colors.background,
-    borderRadius: 8,
-    padding: 4,
-  },
-  toggleButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 8,
-    borderRadius: 6,
-  },
-  activeToggle: {
-    backgroundColor: Colors.primary,
-  },
-  toggleText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: Colors.textSecondary,
-  },
-  activeToggleText: {
-    color: Colors.surface,
-  },
   chartContainer: {
     backgroundColor: Colors.surface,
-    marginHorizontal: 16,
-    marginVertical: 8,
+    marginHorizontal: 20,
+    marginBottom: 16,
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: Colors.borderLight,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
   },
-  pieChartContainer: {
-    backgroundColor: Colors.surface,
-    marginHorizontal: 16,
-    marginVertical: 8,
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.borderLight,
+  chartHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
   },
   chartTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
     color: Colors.textPrimary,
-    marginBottom: 12,
+  },
+  chartToggle: {
+    flexDirection: 'row',
+    backgroundColor: Colors.background,
+    borderRadius: 8,
+    padding: 2,
+  },
+  chartToggleButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  activeChartToggle: {
+    backgroundColor: Colors.primary,
+  },
+  chartToggleText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: Colors.textSecondary,
+  },
+  activeChartToggleText: {
+    color: Colors.surface,
   },
   chart: {
-    marginVertical: 8,
-    borderRadius: 16,
-    alignSelf: 'center',
+    borderRadius: 12,
   },
   chartLegend: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 12,
-    gap: 16,
+    marginTop: 16,
+    gap: 20,
+  },
+  pieChartContainer: {
+    backgroundColor: Colors.surface,
+    marginHorizontal: 20,
+    marginBottom: 16,
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
   },
   pieChartLegend: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginTop: 12,
+    marginTop: 16,
   },
   legendItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
   },
   legendColor: {
     width: 12,
@@ -413,42 +420,53 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   legendText: {
-    fontSize: 12,
+    fontSize: 13,
+    fontWeight: '500',
     color: Colors.textSecondary,
   },
   topCustomersContainer: {
     backgroundColor: Colors.surface,
-    marginHorizontal: 16,
-    marginVertical: 8,
+    marginHorizontal: 20,
+    marginBottom: 24,
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: Colors.errorLight,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
     color: Colors.error,
-    marginBottom: 12,
   },
   topCustomerItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: Colors.borderLight,
   },
   rankBadge: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: Colors.error + '20',
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: Colors.error + '15',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
   },
   rankText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '700',
     color: Colors.error,
   },
@@ -456,7 +474,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   topCustomerName: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
     color: Colors.textPrimary,
   },

@@ -44,7 +44,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   searchInput: {
-    height: 36,
+    height: 44,
     borderWidth: 1,
     borderColor: Colors.border,
     borderRadius: BorderRadius.md,

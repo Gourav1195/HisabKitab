@@ -1,18 +1,37 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { Colors } from '../theme/Colors';
 
 const SettingsScreen = ({ navigation }: any) => {
   return (
     <View style={styles.container}>
       <Text style={styles.header}>Settings</Text>
 
+      <TouchableOpacity onPress={() => navigation.navigate('Profile')}>        
+        <Text style={styles.title}>Profile</Text>
+        <Text style={styles.sub}>Profile Settings</Text>
+      </TouchableOpacity>
+
       <TouchableOpacity
         style={styles.row}
         onPress={() => navigation.navigate('DataSettings')}
       >
-        <Text style={styles.title}>Data & Backup</Text>
+        <Text style={styles.title}>Download Data on Excel</Text>
         <Text style={styles.sub}>Export, backup, restore</Text>
       </TouchableOpacity>
+
+      <TouchableOpacity
+  style={styles.settingRow}
+  onPress={() => navigation.navigate('Backup')}
+>
+  <MaterialCommunityIcons
+    name="cloud-upload-outline"
+    size={20}
+    color={Colors.primary}
+  />
+  <Text style={styles.settingText}>Backup & Restore</Text>
+</TouchableOpacity>
 
       <TouchableOpacity
         style={styles.row}
@@ -72,4 +91,17 @@ const styles = StyleSheet.create({
   danger: {
     color: '#d9534f',
   },
+  settingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderColor: '#eee',
+  },
+  settingText: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  
 });

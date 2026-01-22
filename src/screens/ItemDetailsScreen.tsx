@@ -1,7 +1,10 @@
 import React, { useEffect, useState, } from 'react';
-import { View, Text, StyleSheet, Button, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TextInput } from 'react-native';
 import { getDB } from '../db';
 import { Item } from '../types/inventory';
+import { adjustItemQty, getAllItems } from '../repo/inventoryRepo';
+import { getRecentStockHistory } from '../repo/inventoryRepo';
+import { formatDateTime } from '../utils/formatDateTime';
 
 const ItemDetailsScreen = ({ route }: any) => {
   const { itemId } = route.params;
@@ -16,7 +19,7 @@ const ItemDetailsScreen = ({ route }: any) => {
   const [buyPrice, setBuyPrice] = useState('');
   const [barcode, setBarcode] = useState('');
   const [sku, setSku] = useState('');
-
+  const [history, setHistory] = useState<any[]>([]);
 
   useEffect(() => {
     if (item) {
@@ -29,43 +32,18 @@ const ItemDetailsScreen = ({ route }: any) => {
   }, [item]);
 
   const loadItem = React.useCallback(() => {
-    const db = getDB();
-    const result = db.execute(
-      `SELECT 
-        id,
-        name,
-        barcode,
-        sku,
-        sell_price,
-        buy_price,
-        quantity,
-        low_stock_threshold,
-        created_at as createdAt,
-        updated_at as updatedAt
-       FROM items
-       WHERE id = ? and is_deleted = 0`,
-      [itemId]
-    );
-
-    const row = result.rows?._array?.[0];
-    if (row) {
-      setItem(row as Item);
+    const items = getAllItems();
+    const found = items.find(i => i.id === itemId) || null;
+    setItem(found);
+    if (found) {
+      const h = getRecentStockHistory(itemId, 5);
+      setHistory(h);
     }
   }, [itemId]);
-
-  const adjustQty = (delta: number) => {
-    const db = getDB();
-    db.execute(
-      `UPDATE items SET quantity = quantity + ?, updated_at = ? WHERE id = ?`,
-      [delta, Date.now(), itemId]
-    );
-    loadItem();
-  };
 
   useEffect(() => {
     loadItem();
   }, [loadItem]);
-
 
   return (
     <View style={styles.container}>
@@ -76,17 +54,6 @@ const ItemDetailsScreen = ({ route }: any) => {
       ) : (
         <>
           <Text style={styles.name}>{item.name}</Text>
-
-          <View style={styles.row}>
-            <Text style={styles.label}>Quantity</Text>
-
-            <View style={styles.qtyControls}>
-              <Button title="−" onPress={() => adjustQty(-1)} />
-              <Text style={styles.qtyValue}>{item.quantity}</Text>
-              <Button title="+" onPress={() => adjustQty(1)} />
-            </View>
-          </View>
-
           <View style={styles.row}>
             <Text style={styles.label}>Sell price</Text>
 
@@ -119,6 +86,64 @@ const ItemDetailsScreen = ({ route }: any) => {
               </Text>
             )}
           </View>
+
+          <View style={styles.row}>
+            <Text style={styles.label}>Quantity</Text>
+
+            <View style={styles.block}>
+              <Text style={styles.sectionTitle}>Stock</Text>
+
+              <Text style={styles.stockText}>
+                Total: {item.quantity} | Available: {item.quantity_left}
+              </Text>
+
+              {/* Restock */}
+              <View style={styles.row}>
+                <Text style={styles.label}>Restock</Text>
+                <TextInput
+                  placeholder="+ units"
+                  keyboardType="numeric"
+                  style={styles.input}
+                  onSubmitEditing={(e) => {
+                    const value = Number(e.nativeEvent.text);
+                    if (value > 0) {
+                      adjustItemQty(itemId, value, 'RESTOCK');
+                      loadItem();
+                    }
+                  }}
+                />
+              </View>
+
+              {/* Sale / Damage */}
+              <View style={styles.row}>
+                <Text style={styles.label}>Remove (Sale / Damage)</Text>
+                <TextInput
+                  placeholder="- units"
+                  keyboardType="numeric"
+                  style={styles.input}
+                  onSubmitEditing={(e) => {
+                    const value = Number(e.nativeEvent.text);
+                    if (value > 0) {
+                      adjustItemQty(itemId, value, 'SALE');
+                      loadItem();
+                    }
+                  }}
+                />
+              </View>
+            </View>
+          </View>
+
+          <Text style={styles.sectionTitle}>Recent activity</Text>
+          {history.length === 0 ? (
+            <Text style={styles.muted}>No stock activity yet</Text>
+          ) : (
+            history.map(h => (
+              <Text key={h.id} style={styles.historyRow}>
+                {h.action === 'RESTOCK' ? '+' : '-'}
+                {h.quantity} · {formatDateTime(h.created_at)}
+              </Text>
+            ))
+          )}
 
           <View style={styles.row}>
             <Text
@@ -175,7 +200,6 @@ const ItemDetailsScreen = ({ route }: any) => {
                       setEditingBuyPrice(false);
                     }}
                     style={styles.input}
-                    
                   />
                 ) : (
                   <Text
@@ -203,7 +227,6 @@ const ItemDetailsScreen = ({ route }: any) => {
                       setEditingBarcode(false);
                     }}
                     style={styles.input}
-                    
                   />
                 ) : (
                   <Text
@@ -231,7 +254,6 @@ const ItemDetailsScreen = ({ route }: any) => {
                       setEditingSku(false);
                     }}
                     style={styles.input}
-                    
                   />
                 ) : (
                   <Text
@@ -289,7 +311,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     width: 120,
-
   },
   qtyControls: {
     flexDirection: 'row',
@@ -313,6 +334,33 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#007aff',
   },
-
+  block: {
+    marginBottom: 20,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  stockText: {
+    fontSize: 14,
+    color: '#444',
+    marginBottom: 12,
+  },
+  muted: {
+    fontSize: 14,
+    color: '#999',
+    fontStyle: 'italic',
+  },
+  historyRow: {
+    fontSize: 14,
+    color: '#333',
+    marginTop: 4,
+  },
+  viewMore: {
+    fontSize: 14,
+    color: '#007aff',
+    marginTop: 8,
+  },
 
 });

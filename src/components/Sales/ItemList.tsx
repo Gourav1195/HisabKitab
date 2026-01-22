@@ -22,7 +22,7 @@ const ItemRow: React.FC<{ item: Item; onPress: () => void }> = ({
     <TouchableOpacity 
       style={styles.row} 
       onPress={onPress}
-      disabled={isOutOfStock}
+      // disabled={isOutOfStock}
     >
       <View style={styles.rowContent}>
         <Text style={[
@@ -57,13 +57,11 @@ const ItemList: React.FC<ItemListProps> = ({
   showAlphaIndex,
   cartHeight
 }) => {
-  const filteredItems = React.useMemo(() => {
-    return items.filter(i => 
-      (i.quantity_left  && i.quantity_left > 0) || 
-      i.quantity_left === null || 
-      i.quantity_left === undefined
-    );
-  }, [items]);
+  const filteredItems = items.filter(i =>
+  i.quantity_left !== null &&
+  i.quantity_left !== undefined 
+  //  && i.quantity_left > 0
+);
 
   const groupedItems = React.useMemo(() => {
     if (!showAlphaIndex) return [];
@@ -142,7 +140,9 @@ const styles = StyleSheet.create({
   },
   itemName: {
     fontSize: Typography.fontSize.md,
-    color: Colors.textPrimary,
+    color: Colors.textSecondary,
+    fontWeight: Typography.fontWeight.bold,
+    letterSpacing: 0.2,
   },
   itemNameOutOfStock: {
     color: Colors.textLight,

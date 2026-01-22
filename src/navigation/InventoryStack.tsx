@@ -4,7 +4,6 @@ import { TouchableOpacity, Text } from 'react-native';
 import InventoryListScreen from '../screens/InventoryListScreen';
 import ItemDetailsScreen from '../screens/ItemDetailsScreen';
 import { useNavigation } from '@react-navigation/native';
-import AddItemScreen from '../screens/AddItemScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -31,11 +30,6 @@ const InventoryStack = () => {
           title: 'Inventory',
           headerRight: SettingsButton,
         }}
-      />
-      <Stack.Screen
-        name="AddItem"
-        component={AddItemScreen}
-        options={{ title: 'Add item' }}
       />
       <Stack.Screen
         name="ItemDetail"
