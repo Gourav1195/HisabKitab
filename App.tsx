@@ -5,11 +5,15 @@ import { initDB } from './src/db';
 import  RootStack  from './src/navigation/RootStack';
 import { Text, TextInput } from 'react-native';
 import 'react-native-get-random-values';
+import { runAutoBackupIfNeeded } from './src/backup/runAutoBackup';
 // import 'react-native-gesture-handler';
 
 const App = () => {
   useEffect(() => {
     initDB();
+  }, []);
+  useEffect(() => {
+    runAutoBackupIfNeeded();
   }, []);
 
   

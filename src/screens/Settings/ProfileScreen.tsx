@@ -7,16 +7,18 @@ const ProfileScreen = () => {
   const [profile, setProfile] = useState<any>(null);
   const [shopName, setShopName] = useState('');
   const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
 
   useEffect(() => {
     const p = getProfile();
     setProfile(p);
     setShopName(p?.shop_name ?? '');
     setPhone(p?.phone ?? '');
+    setEmail(p?.email ?? '');
   }, []);
 
   const save = () => {
-    updateProfile({ shop_name: shopName.trim(), phone: phone.trim() });
+    updateProfile({ shop_name: shopName.trim(), phone: phone.trim(), email: email.trim() });
   };
 
   if (!profile) return null;
@@ -37,7 +39,7 @@ const ProfileScreen = () => {
       />
 
       <TextInput
-        placeholder="Phone (optional)"
+        placeholder="Phone"
         keyboardType="phone-pad"
         value={phone}
         onChangeText={setPhone}
@@ -45,16 +47,15 @@ const ProfileScreen = () => {
         style={styles.input}
       />
 
-      <View style={styles.backupBox}>
-        <Text style={styles.backupTitle}>Backup</Text>
-        <Text style={styles.backupText}>
-          Automatic daily backup keeps your data safe.
-        </Text>
+      <TextInput
+        placeholder="Email"
+        keyboardType="email-address"
+        value={email}
+        onChangeText={setEmail}
+        onBlur={save}
+        style={styles.input}
+      />
 
-        <TouchableOpacity style={styles.backupBtn}>
-          <Text style={styles.backupBtnText}>Enable Backup</Text>
-        </TouchableOpacity>
-      </View>
     </View>
   );
 };

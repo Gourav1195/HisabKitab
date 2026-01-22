@@ -43,6 +43,8 @@ export const CREATE_PROFILE_TABLE = `
     id TEXT PRIMARY KEY,
     shop_name TEXT,
     phone TEXT,
+    email TEXT UNIQUE,
+    last_auto_backup_at INTEGER,
     created_at INTEGER,
     is_pro BOOLEAN DEFAULT 0
   );

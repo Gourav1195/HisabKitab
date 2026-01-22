@@ -6,8 +6,8 @@ const BACKUP_URL = 'https://hisab-kitab-backend-orcin.vercel.app/backup';
 
 export const triggerBackup = async (type: 'AUTO' | 'MANUAL') => {
   const profile = getProfile();
-  if (!profile?.id) {
-    throw new Error('Profile not initialized');
+  if (!profile?.email) {
+    throw new Error('Error: Set Email for Backup');
   }
 
   const payload = buildBackupPayload();
@@ -18,7 +18,7 @@ export const triggerBackup = async (type: 'AUTO' | 'MANUAL') => {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      userId: profile.id,
+      email: profile.email,
       payload,
       appVersion: '1.0.0',
       type,
