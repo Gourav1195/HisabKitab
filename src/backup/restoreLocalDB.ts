@@ -1,5 +1,5 @@
 import { getDB } from '../db';
-import { initDB } from '../db';
+// import { initDB } from '../db';
 
 export const resetAndRestoreDB = async (payload: any) => {
   const db = getDB();

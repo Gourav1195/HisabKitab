@@ -45,6 +45,8 @@ export const CREATE_PROFILE_TABLE = `
     phone TEXT,
     email TEXT UNIQUE,
     last_auto_backup_at INTEGER,
+    last_backup_at INTEGER,
+    last_backup_type TEXT,        -- AUTO | MANUAL
     created_at INTEGER,
     is_pro BOOLEAN DEFAULT 0
   );

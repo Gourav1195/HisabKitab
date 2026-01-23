@@ -5,7 +5,7 @@ import { Colors } from '../../theme/Colors';
 import { Alert } from 'react-native';
 import { triggerBackup } from '../../backup/backupService';
 import { getLastBackup } from '../../backup/getLastBackup';
-import { restoreFromBackup } from '../../backup/restoreService';
+import { restoreBackupByEmail } from '../../backup/restoreService';
 
 const BackupScreen = () => {
   const [loading, setLoading] = React.useState(false);
@@ -13,7 +13,7 @@ const BackupScreen = () => {
     lastBackupAt: string | null;
     type: 'AUTO' | 'MANUAL' | null;
   } | null>(null);
-
+  
   useEffect(() => {
     getLastBackup().then(setLastBackup);
   }, []);
@@ -88,7 +88,7 @@ const BackupScreen = () => {
           style: 'destructive',
           onPress: async () => {
             try {
-              await restoreFromBackup();
+              await restoreBackupByEmail();
               Alert.alert('Restore complete', 'Restart the app.');
             } catch (e: any) {
               Alert.alert('Restore failed', e.message);
