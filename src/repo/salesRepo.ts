@@ -1,9 +1,9 @@
 import { getDB, isDBReady } from '../db';
 
 export type Sale = {
-  id: number;
-  createdAt: number;
-  total: number;
+  // join sale_items → items in getSales(), add to Sale type:
+items: Array<{ name: string; quantity: number; price: number }>
+isCredit: boolean  // from sales.is_credit
 };
 
 export const getSales = (): Sale[] => {
@@ -14,11 +14,16 @@ export const getSales = (): Sale[] => {
 
   const result = db.execute(
     `SELECT
-       id,
-       created_at,
-       total
-     FROM sales
-     ORDER BY created_at DESC`
+       s.id,
+       s.created_at,
+       s.total,
+       s.is_credit,
+       json_group_array(json_object('name', i.name, 'quantity', si.quantity, 'price', si.price)) as items
+     FROM sales s
+     LEFT JOIN sale_items si ON si.sale_id = s.id
+     LEFT JOIN items i ON i.id = si.item_id
+     GROUP BY s.id
+     ORDER BY s.created_at DESC`
   );
 
   return (
@@ -26,6 +31,8 @@ export const getSales = (): Sale[] => {
       id: row.id,
       createdAt: row.created_at,
       total: row.total,
+      isCredit: row.is_credit,
+      items: row.items ? JSON.parse(row.items).filter((item: any) => item.name !== null) : [],
     })) ?? []
   );
 };

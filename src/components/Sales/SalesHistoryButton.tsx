@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { View, TouchableOpacity, Text, StyleSheet, Animated } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
-import { Colors } from '../../theme/Colors';
+import { Colors, Typography } from '../../theme/Colors';
 
 const SellHeaderActions = () => {
   const navigation = useNavigation<any>();
@@ -36,7 +36,7 @@ const SellHeaderActions = () => {
           <MaterialCommunityIcons
             name="book-open-variant"
             size={16}
-            color={Colors.primary}
+            color={Colors.error}
           />
           <Text style={styles.remindText}>Khata</Text>
         </TouchableOpacity>
@@ -84,19 +84,19 @@ const styles = StyleSheet.create({
 
   remindBtn: {
     borderWidth: 1,
-    borderColor: Colors.primary,
-    backgroundColor: Colors.primary + '12',
+    borderColor: Colors.error,
+    backgroundColor: Colors.errorLight + '12',
   },
 
   payText: {
     color: Colors.surface,
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: Typography.fontWeight.bold,
   },
 
   remindText: {
-    color: Colors.primary,
+    color: Colors.error,
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: Typography.fontWeight.bold,
   },
 });

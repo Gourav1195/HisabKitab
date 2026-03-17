@@ -22,7 +22,7 @@ const SettingsStack = () => {
       <Stack.Screen
         name="DataSettings"
         component={DataSettingsScreen}
-        options={{ title: 'Download Data in Excel' }}
+        options={{ title: 'Download Data' }}
       />
       <Stack.Screen
         name="AppInfo"

@@ -1,24 +1,48 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Alert, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Alert, Animated } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+
 import { getAllItems } from '../repo/inventoryRepo';
 import { Item, CartItem } from '../types/inventory';
 import { getDB } from '../db';
-import { useFocusEffect } from '@react-navigation/native';
 import PricePrompt from '../components/Sales/PricePrompt';
 import SearchBar from '../components/Sales/SearchBar';
 import ItemList from '../components/Sales/ItemList';
 import CartBar from '../components/Sales/CartBar';
 import CreditToggle from '../components/Sales/CreditToggle';
 import CustomerSelector from '../components/Sales/CustomerSelector';
-import { Colors, Spacing, BorderRadius } from '../theme/Colors';
+import { Colors, Spacing, Typography, BorderRadius, getScaledFontSize, Shadow } from '../theme/Colors';
+import { useUISettings } from '../ui/UISettingsContext';
 
-interface Customer {
-  id: number;
-  name: string;
-  phone: string;
-}
+interface Customer { id: number; name: string; phone: string; }
+
+type PricePromptState = { visible: boolean; mode: 'existing' | 'new'; item: Item | null; price: string; };
+const EMPTY_PROMPT: PricePromptState = { visible: false, mode: 'existing', item: null, price: '' };
+
+const SaleDoneToast = ({ visible, isCredit, fontScale }: { visible: boolean; isCredit: boolean; fontScale: number }) => {
+  const opacity = React.useRef(new Animated.Value(0)).current;
+  React.useEffect(() => {
+    if (visible) {
+      Animated.sequence([
+        Animated.timing(opacity, { toValue: 1, duration: 200, useNativeDriver: true }),
+        Animated.delay(800),
+        Animated.timing(opacity, { toValue: 0, duration: 300, useNativeDriver: true }),
+      ]).start();
+    }
+  }, [visible, opacity]);
+  if (!visible) return null;
+  const scaledSm = getScaledFontSize(Typography.fontSize.sm, fontScale);
+  return (
+    <Animated.View style={[styles.toast, { opacity, backgroundColor: isCredit ? Colors.stockLow : Colors.success }]}>
+      <MaterialCommunityIcons name="check-circle" size={18 * fontScale} color={Colors.textInverse} />
+      <Text style={[styles.toastText, { fontSize: scaledSm }]}>{isCredit ? 'Credit sale recorded' : 'Sale completed'}</Text>
+    </Animated.View>
+  );
+};
 
 const SellScreen = () => {
+  const { fontScale } = useUISettings();
   const [items, setItems] = useState<Item[]>([]);
   const [cart, setCart] = useState<Record<number, CartItem>>({});
   const [saleDone, setSaleDone] = useState(false);
@@ -27,460 +51,143 @@ const SellScreen = () => {
   const [cartHeight, setCartHeight] = useState(0);
   const [isCredit, setIsCredit] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [pricePrompt, setPricePrompt] = useState<PricePromptState>(EMPTY_PROMPT);
 
-  const [pricePrompt, setPricePrompt] = useState<{
-    visible: boolean;
-    mode: 'existing' | 'new';
-    item: Item | null;
-    price: string;
-  }>({
-    visible: false,
-    mode: 'existing',
-    item: null,
-    price: ''
-  });
+  const loadItems = useCallback(() => {
+    try { setItems(getAllItems()); } catch { setItems([]); } finally { setLoading(false); }
+  }, []);
 
-  useFocusEffect(
-    useCallback(() => {
-      loadItems();
-    }, [])
-  );
+  useFocusEffect(useCallback(() => { loadItems(); }, [loadItems]));
 
-  useEffect(() => {
-    if (!saleDone) return;
-    const t = setTimeout(() => setSaleDone(false), 1200);
-    return () => clearTimeout(t);
-  }, [saleDone]);
+  useEffect(() => { if (!isCredit) setSelectedCustomer(null); }, [isCredit]);
 
-  // Reset customer when credit is turned off
-  useEffect(() => {
-    if (!isCredit) {
-      setSelectedCustomer(null);
-    }
-  }, [isCredit]);
+  const addItemToCart = useCallback((item: Item, price: number) => {
+    setCart(prev => ({ ...prev, [item.id]: { id: item.id, name: item.name, price, qty: (prev[item.id]?.qty ?? 0) + 1 } }));
+  }, []);
 
-  const loadItems = () => {
-    try {
-      const data = getAllItems();
-      setItems(data);
-    } catch (err) {
-      console.error('Failed to load items', err);
-      setItems([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const addItemToCart = (item: Item, price: number) => {
-    setCart(prev => {
-      const existing = prev[item.id];
-
-      // if (item.quantity_left !== null && item.quantity_left !== undefined){
-      //   const newQty = existing ? existing.qty + 1 : 1;
-      //   if (newQty > item.quantity_left) {
-      //     Alert.alert(`Only ${item.quantity_left} in stock`);
-      //     return prev;
-      //   }
-      // }
-
-      return {
-        ...prev,
-        [item.id]: {
-          id: item.id,
-          name: item.name,
-          price,
-          qty: existing ? existing.qty + 1 : 1,
-        },
-      };
-    });
-  };
-
-  const handleAddItem = (item: Item) => {
-    if (item.sell_price > 0) {
-      addItemToCart(item, item.sell_price);
-      return;
-    }
-
-    setPricePrompt({
-      visible: true,
-      mode: 'existing',
-      item,
-      price: ''
-    });
-  };
-
-  const handleQuickAdd = () => {
-    if (!query.trim()) return;
-
-    setPricePrompt({
-      visible: true,
-      mode: 'new',
-      item: {
-        id: -1,
-        name: query.trim(),
-        sell_price: 0,
-        quantity: 0,
-        quantity_left: 0,
-        created_at: Date.now(),
-        updated_at: Date.now(),
-        low_stock_threshold: 0,
-        is_deleted: false,
-      },
-      price: ''
-    });
-  };
-
-  const handlePriceConfirm = (price: number) => {
-    if (!pricePrompt.item) return;
-
-    if (pricePrompt.mode === 'existing') {
-      addItemToCart(pricePrompt.item, price);
-
-      try {
-        const db = getDB();
-        const now = Date.now();
-        db.execute(
-          `UPDATE items SET sell_price = ?, updated_at = ? WHERE id = ?`,
-          [price, now, pricePrompt.item.id]
-        );
-        loadItems();
-      } catch (error) {
-        console.error('Failed to update price:', error);
-      }
-    } else {
-      const db = getDB();
-      const now = Date.now();
-
-      try {
-        const res = db.execute(
-          `INSERT INTO items 
-           (name, sell_price, quantity, quantity_left, created_at, updated_at, low_stock_threshold)
-           VALUES (?, ?, 0, 0, ?, ?, 0)`,
-          [pricePrompt.item.name, price, now, now]
-        );
-
-        const itemId = Number(res.insertId);
-
-        setCart(prev => ({
-          ...prev,
-          [itemId]: {
-            id: itemId,
-            name: pricePrompt.item!.name,
-            price,
-            qty: 1,
-          },
-        }));
-
-        setQuery('');
-        loadItems();
-      } catch (error) {
-        Alert.alert('Failed to add item', error instanceof Error ? error.message : String(error));
-      }
-    }
-
-    setPricePrompt({ visible: false, mode: 'existing', item: null, price: '' });
-  };
-
-  const updateQty = (id: number, delta: number) => {
+  const updateQty = useCallback((id: number, delta: number) => {
     setCart(prev => {
       const next = { ...prev };
-      if (next[id]) {
-        next[id].qty += delta;
-        if (next[id].qty <= 0) {
-          delete next[id];
-        }
-      }
+      if (next[id]) { next[id] = { ...next[id], qty: next[id].qty + delta }; if (next[id].qty <= 0) delete next[id]; }
       return next;
     });
-  };
+  }, []);
 
-  const handleEditPrice = (cartItem: CartItem) => {
-    const item = items.find(it => it.id === cartItem.id);
-    if (item) {
-      setPricePrompt({
-        visible: true,
-        mode: 'existing',
-        item: { ...item, sell_price: cartItem.price },
-        price: String(cartItem.price)
-      });
-    }
-  };
-
-  const insertLedgerEntry = (saleId: number, amount: number) => {
-    if (!selectedCustomer) return;
-
-    const db = getDB();
-    const now = Date.now();
-
-    // For credit sale, insert DEBIT entry (customer owes money)
-    // For payment (future feature), would insert CREDIT entry (customer paid)
-    db.execute(
-      `INSERT INTO ledger 
-       (customer_id, type, direction, amount, sale_id, created_at)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [
-        selectedCustomer.id,
-        'SALE',
-        'DEBIT',  
-        amount,
-        saleId,
-        now
-      ]
-    );
-  };
-
-  const completeSale = () => {
-    // Validation for credit sales
-    if (isCredit && !selectedCustomer) {
-      Alert.alert('Customer Required', 'Please select a customer for credit sale');
-      return;
-    }
-
-    const db = getDB();
-    const now = Date.now();
-    const cartItems = Object.values(cart);
-
-    if (cartItems.length === 0) return;
-
-    db.execute('BEGIN TRANSACTION');
-
-    try {
-      // Insert sale with credit flag
-      const saleResult = db.execute(
-        `INSERT INTO sales (created_at, total, is_credit, customer_id) VALUES (?, ?, ?, ?)`,
-        [now, total, isCredit ? 1 : 0, selectedCustomer?.id || null]
-      );
-
-      const saleId = saleResult.insertId;
-
-      // Insert sale items + update stock
-      cartItems.forEach(i => {
-        db.execute(
-          `INSERT INTO sale_items (sale_id, item_id, quantity, price)
-           VALUES (?, ?, ?, ?)`,
-          [saleId, i.id, i.qty, i.price]
-        );
-
-        const item = items.find(it => it.id === i.id);
-        if (item && item.quantity_left !== null) {
-          db.execute(
-            `UPDATE items
-             SET quantity_left = quantity_left - ?,
-                 updated_at = ?
-             WHERE id = ?`,
-            [i.qty, now, i.id]
-          );
-        }
-      });
-
-      // Insert ledger entry for credit sales
-      if (isCredit && selectedCustomer && saleId) {
-        insertLedgerEntry(saleId, total);
-      }
-
-      db.execute('COMMIT');
-
-      // Show success message
-      setSaleDone(true);
-
-      // Clear cart
-      setCart({});
-
-      // Reset customer selection if credit sale
-      if (isCredit) {
-        setSelectedCustomer(null);
-      }
-
-      // Refresh items
-      loadItems();
-
-    } catch (e) {
-      db.execute('ROLLBACK');
-      Alert.alert(
-        'Sale failed',
-        e instanceof Error ? e.message : String(e)
-      );
-    }
-  };
-
-  const clearCart = () => {
+  const clearCart = useCallback(() => {
     if (Object.keys(cart).length === 0) return;
+    Alert.alert('Clear Cart', 'Remove all items from cart?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Clear', style: 'destructive', onPress: () => setCart({}) },
+    ]);
+  }, [cart]);
 
-    Alert.alert(
-      'Clear Cart',
-      'Are you sure you want to clear all items from cart?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Clear',
-          style: 'destructive',
-          onPress: () => setCart({})
-        }
-      ]
-    );
-  };
+  const handleAddItem = useCallback((item: Item) => {
+    if (item.sell_price > 0) { addItemToCart(item, item.sell_price); return; }
+    setPricePrompt({ visible: true, mode: 'existing', item, price: '' });
+  }, [addItemToCart]);
+
+  const handleQuickAdd = useCallback(() => {
+    if (!query.trim()) return;
+    setPricePrompt({ visible: true, mode: 'new', item: { id: -1, name: query.trim(), sell_price: 0, quantity: 0, quantity_left: 0, created_at: Date.now(), updated_at: Date.now(), low_stock_threshold: 0, is_deleted: false }, price: '' });
+  }, [query]);
+
+  const handleEditPrice = useCallback((cartItem: CartItem) => {
+    const item = items.find(it => it.id === cartItem.id);
+    if (item) { setPricePrompt({ visible: true, mode: 'existing', item: { ...item, sell_price: cartItem.price }, price: String(cartItem.price) }); }
+  }, [items]);
+
+  const handlePriceConfirm = useCallback((price: number) => {
+    if (!pricePrompt.item) return;
+    if (pricePrompt.mode === 'existing') {
+      addItemToCart(pricePrompt.item, price);
+      try { getDB().execute('UPDATE items SET sell_price = ?, updated_at = ? WHERE id = ?', [price, Date.now(), pricePrompt.item.id]); loadItems(); } catch { }
+    } else {
+      try {
+        const db = getDB(); const now = Date.now();
+        const res = db.execute(`INSERT INTO items (name, sell_price, quantity, quantity_left, created_at, updated_at, low_stock_threshold) VALUES (?, ?, 0, 0, ?, ?, 0)`, [pricePrompt.item.name, price, now, now]);
+        const itemId = Number(res.insertId);
+        setCart(prev => ({ ...prev, [itemId]: { id: itemId, name: pricePrompt.item!.name, price, qty: 1 } }));
+        setQuery(''); loadItems();
+      } catch (e) { Alert.alert('Failed to add item', e instanceof Error ? e.message : String(e)); }
+    }
+    setPricePrompt(EMPTY_PROMPT);
+  }, [pricePrompt, addItemToCart, loadItems]);
+
+  const total = useMemo(() => Object.values(cart).reduce((sum, i) => sum + i.qty * i.price, 0), [cart]);
+
+  const completeSale = useCallback(() => {
+    if (isCredit && !selectedCustomer) { Alert.alert('Customer Required', 'Please select a customer for a credit sale'); return; }
+    const db = getDB(); const now = Date.now(); const cartItems = Object.values(cart);
+    if (cartItems.length === 0) return;
+    try {
+      db.execute('BEGIN TRANSACTION');
+      const saleResult = db.execute('INSERT INTO sales (created_at, total, is_credit, customer_id) VALUES (?, ?, ?, ?)', [now, total, isCredit ? 1 : 0, selectedCustomer?.id ?? null]);
+      const saleId = saleResult.insertId;
+      cartItems.forEach(i => {
+        db.execute('INSERT INTO sale_items (sale_id, item_id, quantity, price) VALUES (?, ?, ?, ?)', [saleId, i.id, i.qty, i.price]);
+        const inv = items.find(it => it.id === i.id);
+        if (inv && inv.quantity_left != null) { db.execute('UPDATE items SET quantity_left = quantity_left - ?, updated_at = ? WHERE id = ?', [i.qty, now, i.id]); }
+      });
+      if (isCredit && selectedCustomer && saleId) { db.execute('INSERT INTO ledger (customer_id, type, direction, amount, sale_id, created_at) VALUES (?, ?, ?, ?, ?, ?)', [selectedCustomer.id, 'SALE', 'DEBIT', total, saleId, now]); }
+      db.execute('COMMIT');
+      setSaleDone(true); setTimeout(() => setSaleDone(false), 1500); setCart({}); if (isCredit) setSelectedCustomer(null); loadItems();
+    } catch (e) { db.execute('ROLLBACK'); Alert.alert('Sale failed', e instanceof Error ? e.message : String(e)); }
+  }, [cart, isCredit, selectedCustomer, total, items, loadItems]);
 
   const filteredItems = useMemo(() => {
-    return items.filter(i =>
-      i.name.toLowerCase().includes(query.toLowerCase())
-    );
+    if (!query.trim()) return items;
+    const q = query.toLowerCase();
+    return items.filter(i => i.name.toLowerCase().includes(q) || i.sku?.toLowerCase().includes(q) || i.barcode?.toLowerCase().includes(q));
   }, [items, query]);
 
-  const SHOW_ALPHA_INDEX = filteredItems.length >= 50;
-  const total = Object.values(cart)
-    .reduce((sum, i) => sum + i.qty * i.price, 0);
+  const cartCount = Object.keys(cart).length;
+  const scaledMd = getScaledFontSize(Typography.fontSize.md, fontScale);
 
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <Text>Loading...</Text>
+        <MaterialCommunityIcons name="cart-outline" size={48 * fontScale} color={Colors.textLight} />
+        <Text style={[styles.loadingText, { fontSize: scaledMd }]}>Loading items…</Text>
       </View>
     );
   }
 
   return (
-    <View style={[
-      styles.container,
-      isCredit ? styles.creditBackground : styles.saleBackground
-    ]}>
-      {saleDone && (
-        <View style={[
-          styles.saleDone,
-          isCredit ? styles.creditSaleDone : styles.cashSaleDone
-        ]}>
-          <Text style={styles.saleDoneText}>
-            ✓ {isCredit ? 'Credit Sale' : 'Cash Sale'} completed
-          </Text>
-        </View>
-      )}
-
-      <View style={styles.header}>
-        <TouchableOpacity onPress={clearCart} disabled={Object.keys(cart).length === 0}>
-          <Text style={[
-            styles.clearCartText,
-            Object.keys(cart).length === 0 && styles.clearCartDisabled
-          ]}>
-            Clear
-          </Text>
-        </TouchableOpacity>
+    <View style={styles.container}>
+      <SaleDoneToast visible={saleDone} isCredit={isCredit} fontScale={fontScale} />
+      
+      <View style={styles.topBar}>
+        <CreditToggle isCredit={isCredit} onToggle={() => setIsCredit(v => !v)} customerName={selectedCustomer?.name} />
       </View>
-
-      <CreditToggle
-        isCredit={isCredit}
-        onToggle={() => setIsCredit(!isCredit)}
-        customerName={selectedCustomer?.name}
-      />
 
       {isCredit && (
         <View style={styles.customerSection}>
-          <CustomerSelector
-            selectedCustomerId={selectedCustomer?.id}
-            onSelectCustomer={setSelectedCustomer}
-          />
+          <CustomerSelector selectedCustomerId={selectedCustomer?.id} onSelectCustomer={setSelectedCustomer} />
         </View>
       )}
 
-      <SearchBar
-        query={query}
-        onChangeText={setQuery}
-        onQuickAdd={handleQuickAdd}
-        showQuickAdd={filteredItems.length === 0 && query.trim() !== ''}
-      />
+      <SearchBar query={query} onChangeText={setQuery} onQuickAdd={handleQuickAdd} showQuickAdd={filteredItems.length === 0 && query.trim() !== ''} />
 
-      <View style={{ flex: 1 }}>
-        {filteredItems.length > 0 && (
-          <ItemList
-            items={filteredItems}
-            onAddItem={handleAddItem}
-            showAlphaIndex={SHOW_ALPHA_INDEX}
-            cartHeight={cartHeight}
-          />
-        )}
+      <View style={styles.listWrapper}>
+        <ItemList items={filteredItems} onAddItem={handleAddItem} showAlphaIndex={filteredItems.length >= 50} cartHeight={cartHeight} />
       </View>
 
-      <PricePrompt
-        visible={pricePrompt.visible}
-        mode={pricePrompt.mode}
-        item={pricePrompt.item}
-        price={pricePrompt.price}
-        onChange={price => setPricePrompt(p => ({ ...p, price }))}
-        onCancel={() => setPricePrompt({ visible: false, mode: 'existing', item: null, price: '' })}
-        onConfirm={handlePriceConfirm}
-      />
+      <PricePrompt visible={pricePrompt.visible} mode={pricePrompt.mode} item={pricePrompt.item} price={pricePrompt.price} onChange={price => setPricePrompt(p => ({ ...p, price }))} onCancel={() => setPricePrompt(EMPTY_PROMPT)} onConfirm={handlePriceConfirm} />
 
-      <CartBar
-        cart={cart}
-        total={total}
-        onUpdateQty={updateQty}
-        onEditPrice={handleEditPrice}
-        onCompleteSale={completeSale}
-        onLayout={setCartHeight}
-        isCredit={isCredit}
-        customerName={selectedCustomer?.name}
-      />
+      <CartBar cart={cart} total={total} onUpdateQty={updateQty} onEditPrice={handleEditPrice} onCompleteSale={completeSale} onClearCart={clearCart} onLayout={setCartHeight} isCredit={isCredit} customerName={selectedCustomer?.name} />
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingHorizontal: Spacing.md,
-    // paddingTop: Spacing.lg,
-  },
-  saleBackground: {
-    backgroundColor: '#F9FAFB', // Light background for cash sales
-  },
-  creditBackground: {
-    backgroundColor: '#FFF5F5', // Light red background for credit sales
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: Colors.background,
-  },
-  saleDone: {
-    padding: Spacing.sm,
-    borderRadius: BorderRadius.sm,
-    marginBottom: Spacing.md,
-  },
-  cashSaleDone: {
-    backgroundColor: '#E8F5E9', // Light green for cash
-  },
-  creditSaleDone: {
-    backgroundColor: '#FFEBEE', // Light red for credit
-  },
-  saleDoneText: {
-    color: Colors.textPrimary,
-    fontSize: 13,
-    textAlign: 'center',
-    fontWeight: '500',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing.md,
-  },
-  headerText: {
-    fontSize: 20,
-    color: Colors.primaryDark,
-    fontWeight: '600',
-  },
-  clearCartText: {
-    color: Colors.error,
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  clearCartDisabled: {
-    color: Colors.textLight,
-    opacity: 0.5,
-  },
-  customerSection: {
-    marginBottom: Spacing.md,
-
-  },
+  container: { flex: 1, backgroundColor: Colors.background },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background, gap: Spacing.lg },
+  loadingText: { color: Colors.textLight, fontWeight: Typography.fontWeight.medium },
+  toast: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm, paddingVertical: Spacing.md, paddingHorizontal: Spacing.xl, marginHorizontal: Spacing.xl, marginTop: Spacing.lg, borderRadius: BorderRadius.lg, ...Shadow.sm },
+  toastText: { color: Colors.textInverse, fontWeight: Typography.fontWeight.semibold },
+  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.xl, paddingVertical: Spacing.lg, backgroundColor: Colors.surface, borderBottomWidth: 1, borderBottomColor: Colors.borderLight },
+  customerSection: { paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md, backgroundColor: Colors.surface, borderBottomWidth: 1, borderBottomColor: Colors.borderLight },
+  listWrapper: { flex: 1 },
 });
 
 export default SellScreen;

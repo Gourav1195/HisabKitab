@@ -21,36 +21,38 @@ const AddItemForm: React.FC<AddItemFormProps> = ({ onItemAdded }) => {
   const [price, setPrice] = useState('');
   const [isAdding, setIsAdding] = useState(false);
 
-  const nameScale = useRef(new Animated.Value(1)).current;
-  const priceScale = useRef(new Animated.Value(1)).current;
+  const nameBorder = useRef(new Animated.Value(0)).current;
+  const priceBorder = useRef(new Animated.Value(0)).current;
 
-  const animateIn = (anim: Animated.Value) => {
-    Animated.spring(anim, {
-      toValue: 1.03,
-      useNativeDriver: true,
-      friction: 7,
-    }).start();
-  };
-
-  const animateOut = (anim: Animated.Value) => {
-    Animated.spring(anim, {
+  const focusField = (anim: Animated.Value) =>
+    Animated.timing(anim, {
       toValue: 1,
-      useNativeDriver: true,
-      friction: 7,
+      duration: 150,
+      useNativeDriver: false,
     }).start();
-  };
+
+  const blurField = (anim: Animated.Value) =>
+    Animated.timing(anim, {
+      toValue: 0,
+      duration: 150,
+      useNativeDriver: false,
+    }).start();
+
+  const interpolateBorder = (anim: Animated.Value) =>
+    anim.interpolate({
+      inputRange: [0, 1],
+      outputRange: [Colors.border, Colors.primary],
+    });
 
   const handleAddItem = async () => {
     if (!name.trim()) {
       Alert.alert('Required', 'Please enter item name');
       return;
     }
-
     if (!price.trim()) {
       Alert.alert('Required', 'Please enter price');
       return;
     }
-
     const priceNum = parseFloat(price);
     if (isNaN(priceNum) || priceNum <= 0) {
       Alert.alert('Invalid Price', 'Please enter a valid price');
@@ -58,18 +60,14 @@ const AddItemForm: React.FC<AddItemFormProps> = ({ onItemAdded }) => {
     }
 
     setIsAdding(true);
-
     try {
       const db = getDB();
       const now = Date.now();
-
       const result = db.execute(
-        `INSERT INTO items
-         (name, sell_price, quantity, quantity_left, created_at, updated_at, low_stock_threshold)
+        `INSERT INTO items (name, sell_price, quantity, quantity_left, created_at, updated_at, low_stock_threshold)
          VALUES (?, ?, 0, 0, ?, ?, 5)`,
-        [name.trim(), priceNum, now, now]
+        [name.trim(), priceNum, now, now],
       );
-
       if (result.rowsAffected > 0 || result.insertId) {
         setName('');
         setPrice('');
@@ -84,62 +82,72 @@ const AddItemForm: React.FC<AddItemFormProps> = ({ onItemAdded }) => {
     }
   };
 
+  const canSubmit =
+    name.trim().length > 0 && price.trim().length > 0 && !isAdding;
+
   return (
     <View style={styles.wrapper}>
-      <Text style={styles.sectionTitle}>Add Item</Text>
+      <Text style={styles.label}>ADD ITEM</Text>
+      <View style={styles.formRow}>
+        <Animated.View
+          style={[
+            styles.inputWrap,
+            styles.nameWrap,
+            { borderColor: interpolateBorder(nameBorder) },
+          ]}
+        >
+          <TextInput
+            placeholder="Item name"
+            placeholderTextColor={Colors.textLight}
+            value={name}
+            onChangeText={setName}
+            style={styles.input}
+            maxLength={50}
+            returnKeyType="next"
+            onFocus={() => focusField(nameBorder)}
+            onBlur={() => blurField(nameBorder)}
+          />
+        </Animated.View>
 
-      <View style={styles.container}>
-        <View style={styles.formRow}>
-          <Animated.View style={{ flex: 2, transform: [{ scale: nameScale }] }}>
-            <TextInput
-              placeholder="Item name"
-              placeholderTextColor={Colors.textLight}
-              value={name}
-              onChangeText={setName}
-              style={[styles.input, styles.nameInput]}
-              maxLength={50}
-              returnKeyType="next"
-              onFocus={() => animateIn(nameScale)}
-              onBlur={() => animateOut(nameScale)}
+        <Animated.View
+          style={[
+            styles.inputWrap,
+            styles.priceWrap,
+            { borderColor: interpolateBorder(priceBorder) },
+          ]}
+        >
+          <Text style={styles.currencySymbol}>₹</Text>
+          <TextInput
+            placeholder="Price"
+            placeholderTextColor={Colors.textLight}
+            value={price}
+            onChangeText={setPrice}
+            style={[styles.input, styles.priceInput]}
+            keyboardType="decimal-pad"
+            maxLength={10}
+            returnKeyType="done"
+            onSubmitEditing={handleAddItem}
+            onFocus={() => focusField(priceBorder)}
+            onBlur={() => blurField(priceBorder)}
+          />
+        </Animated.View>
+
+        <TouchableOpacity
+          style={[styles.addButton, !canSubmit && styles.addButtonDisabled]}
+          onPress={handleAddItem}
+          disabled={!canSubmit}
+          activeOpacity={0.8}
+        >
+          {isAdding ? (
+            <Text style={styles.addButtonDot}>…</Text>
+          ) : (
+            <MaterialCommunityIcons
+              name="plus"
+              size={22}
+              color={Colors.textInverse}
             />
-          </Animated.View>
-
-          <Animated.View style={{ flex: 1, transform: [{ scale: priceScale }] }}>
-            <TextInput
-              placeholder="₹ Price"
-              placeholderTextColor={Colors.textLight}
-              value={price}
-              onChangeText={setPrice}
-              style={[styles.input, styles.priceInput]}
-              keyboardType="decimal-pad"
-              maxLength={10}
-              returnKeyType="done"
-              onSubmitEditing={handleAddItem}
-              onFocus={() => animateIn(priceScale)}
-              onBlur={() => animateOut(priceScale)}
-            />
-          </Animated.View>
-
-          <TouchableOpacity
-            style={[
-              styles.addButton,
-              (!name.trim() || !price.trim() || isAdding) && styles.addButtonDisabled,
-            ]}
-            onPress={handleAddItem}
-            disabled={!name.trim() || !price.trim() || isAdding}
-            activeOpacity={0.85}
-          >
-            {isAdding ? (
-              <Text style={styles.addButtonText}>…</Text>
-            ) : (
-              <MaterialCommunityIcons
-                name="plus"
-                size={20}
-                color={Colors.textInverse}
-              />
-            )}
-          </TouchableOpacity>
-        </View>
+          )}
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -148,23 +156,19 @@ const AddItemForm: React.FC<AddItemFormProps> = ({ onItemAdded }) => {
 const styles = StyleSheet.create({
   wrapper: {
     backgroundColor: Colors.surface,
-    paddingHorizontal: Spacing.md,
-    paddingTop: Spacing.md,
-    paddingBottom: Spacing.lg, // 👈 makes it feel like a section
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.xl,
     borderBottomWidth: 1,
     borderColor: Colors.borderLight,
   },
 
-  sectionTitle: {
-    fontSize: Typography.fontSize.sm,
-    fontWeight: '700',
-    color: Colors.textSecondary,
-    marginBottom: Spacing.sm,
-    letterSpacing: 0.5,
-  },
-
-  container: {
-    backgroundColor: Colors.surface,
+  label: {
+    fontSize: Typography.fontSize.xs,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.textLight,
+    letterSpacing: 1,
+    marginBottom: Spacing.lg,
   },
 
   formRow: {
@@ -173,29 +177,46 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
   },
 
-  input: {
-    height: 44, // 👈 taller = less cramped
-    borderWidth: 1,
-    borderColor: Colors.border,
+  inputWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 46,
+    borderWidth: 1.5,
     borderRadius: BorderRadius.lg,
-    paddingHorizontal: Spacing.md,
-    fontSize: Typography.fontSize.md,
-    color: Colors.textPrimary,
     backgroundColor: Colors.background,
+    paddingHorizontal: Spacing.lg,
   },
 
-  nameInput: {
+  nameWrap: {
     flex: 2,
   },
 
-  priceInput: {
+  priceWrap: {
     flex: 1,
+  },
+
+  currencySymbol: {
+    fontSize: Typography.fontSize.md,
+    color: Colors.textSecondary,
+    marginRight: Spacing.xs,
+    fontWeight: Typography.fontWeight.medium,
+  },
+
+  input: {
+    flex: 1,
+    fontSize: Typography.fontSize.md,
+    color: Colors.textPrimary,
+    height: 46,
+    padding: 0,
+  },
+
+  priceInput: {
     textAlign: 'right',
   },
 
   addButton: {
-    width: 44,   // 👈 matches input height
-    height: 44,
+    width: 46,
+    height: 46,
     backgroundColor: Colors.primary,
     borderRadius: BorderRadius.lg,
     justifyContent: 'center',
@@ -206,12 +227,11 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.border,
   },
 
-  addButtonText: {
+  addButtonDot: {
     color: Colors.textInverse,
-    fontSize: Typography.fontSize.lg,
-    fontWeight: '700',
+    fontSize: Typography.fontSize.xl,
+    fontWeight: Typography.fontWeight.bold,
   },
 });
-
 
 export default AddItemForm;

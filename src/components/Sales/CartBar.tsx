@@ -1,14 +1,13 @@
-// components/Sales/CartBar.tsx - Updated
 import React from 'react';
-import { 
-  View, 
-  Text, 
-  TouchableOpacity, 
-  StyleSheet 
+import {
+  View, Text, TouchableOpacity, StyleSheet, ScrollView,
 } from 'react-native';
-import { CartItem } from '../../types/inventory';
-import { Colors, Spacing, Typography, BorderRadius } from '../../theme/Colors';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { CartItem } from '../../types/inventory';
+import {
+  Colors, Spacing, Typography, BorderRadius, getScaledFontSize,
+} from '../../theme/Colors';
+import { useUISettings } from '../../ui/UISettingsContext';
 
 interface CartBarProps {
   cart: Record<number, CartItem>;
@@ -16,95 +15,175 @@ interface CartBarProps {
   onUpdateQty: (id: number, delta: number) => void;
   onEditPrice: (item: CartItem) => void;
   onCompleteSale: () => void;
+  onClearCart: () => void;
   onLayout: (height: number) => void;
   isCredit: boolean;
   customerName?: string;
 }
 
 const CartBar: React.FC<CartBarProps> = ({
-  cart,
-  total,
-  onUpdateQty,
-  onEditPrice,
-  onCompleteSale,
-  onLayout,
-  isCredit,
-  customerName
+  cart, total, onUpdateQty, onEditPrice,
+  onCompleteSale, onClearCart, onLayout, isCredit, customerName,
 }) => {
-  const cartItems = Object.values(cart);
-  
+  const { fontScale } = useUISettings();
+
+  const cartItems   = Object.values(cart);
+  const isEmpty     = cartItems.length === 0;
+  const accent      = isCredit ? Colors.stockLow : Colors.primary;
+
+  const scaledXs = getScaledFontSize(Typography.fontSize.xs, fontScale);
+  const scaledSm = getScaledFontSize(Typography.fontSize.sm, fontScale);
+  const scaledMd = getScaledFontSize(Typography.fontSize.md, fontScale);
+  const scaledLg = getScaledFontSize(Typography.fontSize.lg, fontScale);
+
   return (
-    <View 
-      style={[
-        styles.container,
-        isCredit ? styles.creditContainer : styles.cashContainer
-      ]}
+    <View
+      style={[styles.container, { borderTopColor: accent + '40' }]}
       onLayout={e => onLayout(e.nativeEvent.layout.height)}
     >
-      <View style={styles.header}>
-        <Text style={styles.total}>
-          Total: <Text style={styles.totalAmount}>₹{total.toFixed(2)}</Text>
-        </Text>
-        
-        {isCredit && customerName && (
-          <View style={styles.creditInfo}>
-            <MaterialCommunityIcons 
-              name="credit-card-outline" 
-              size={16} 
-              color={Colors.error} 
-            />
-            <Text style={styles.customerName}>{customerName}</Text>
-          </View>
-        )}
-      </View>
-      
-      {cartItems.length > 0 && (
-        <>
-          {cartItems.map(item => (
-            <View key={`cart-${item.id}`} style={styles.cartItem}>
-              <View style={styles.cartItemInfo}>
-                <Text style={styles.cartItemName}>{item.name}</Text>
-                <TouchableOpacity onPress={() => onEditPrice(item)}>
-                  <Text style={styles.cartItemPrice}>₹{item.price.toFixed(2)}</Text>
-                </TouchableOpacity>
-              </View>
-              
-              <View style={styles.quantityControls}>
-                <TouchableOpacity
-                  style={styles.qtyButton}
-                  onPress={() => onUpdateQty(item.id, -1)}
-                >
-                  <Text style={styles.qtyButtonText}>-</Text>
-                </TouchableOpacity>
-                
-                <Text style={styles.quantity}>{item.qty}</Text>
-                
-                <TouchableOpacity
-                  style={styles.qtyButton}
-                  onPress={() => onUpdateQty(item.id, 1)}
-                >
-                  <Text style={styles.qtyButtonText}>+</Text>
-                </TouchableOpacity>
-              </View>
+      {/* ── Summary header ──────────────────────────────────────── */}
+      <View style={styles.summaryRow}>
+        {/* Left: Clear button + Cart status */}
+        <View style={styles.summaryLeft}>
+          <View style={styles.clearAndStatusRow}>
+            {/* Clear All Button */}
+            {!isEmpty && (
+              <TouchableOpacity
+                style={styles.clearBtn}
+                onPress={onClearCart}
+                activeOpacity={0.7}
+              >
+                <MaterialCommunityIcons
+                  name="delete-outline"
+                  size={14 * fontScale}
+                  color={Colors.error}
+                />
+                <Text style={[styles.clearBtnText, { fontSize: scaledXs }]}>
+                  Clear All
+                </Text>
+              </TouchableOpacity>
+            )}
+            
+            {/* Cart status */}
+            <View style={styles.statusRow}>
+              <MaterialCommunityIcons 
+                name={isEmpty ? 'cart-outline' : 'cart'} 
+                size={14 * fontScale} 
+                color={isEmpty ? Colors.textLight : accent} 
+              />
+              <Text style={[styles.summaryLabel, { fontSize: scaledXs }]} numberOfLines={1}>
+                {isEmpty
+                  ? 'Cart is empty — tap items to add'
+                  : `${cartItems.length} item${cartItems.length !== 1 ? 's' : ''} in cart`}
+              </Text>
             </View>
-          ))}
+          </View>
           
+          {/* Customer chip — only in credit mode */}
+          {isCredit && customerName ? (
+            <View style={[styles.customerChip, { backgroundColor: Colors.stockLow + '12' }]}>
+              <MaterialCommunityIcons name="account-outline" size={12 * fontScale} color={Colors.stockLow} />
+              <Text style={[styles.customerChipText, { fontSize: scaledXs }]} numberOfLines={1}>
+                {customerName}
+              </Text>
+            </View>
+          ) : null}
+        </View>
+        
+        {/* Right: Total */}
+        <View style={styles.totalContainer}>
+          <Text style={[styles.totalLabel, { fontSize: scaledXs }]}>Total</Text>
+          <Text style={[styles.totalText, { fontSize: scaledLg, color: accent }]}>
+            ₹{total.toFixed(0)}
+          </Text>
+        </View>
+      </View>
+
+      {/* ── Cart item rows ───────────────────────────────────────── */}
+      {!isEmpty && (
+        <>
+          <ScrollView
+            style={styles.itemList}
+            showsVerticalScrollIndicator={false}
+            nestedScrollEnabled
+            keyboardShouldPersistTaps="handled"
+          >
+            {cartItems.map((item, idx) => (
+              <View
+                key={`cart-${item.id}`}
+                style={[
+                  styles.itemRow,
+                  idx < cartItems.length - 1 && styles.itemRowBorder,
+                ]}
+              >
+                {/* Left: name + price (tap to edit) */}
+                <TouchableOpacity
+                  style={styles.itemInfo}
+                  onPress={() => onEditPrice(item)}
+                  activeOpacity={0.6}
+                >
+                  <Text style={[styles.itemName, { fontSize: scaledSm }]} numberOfLines={1}>
+                    {item.name}
+                  </Text>
+                  <View style={styles.priceHint}>
+                    <Text style={[styles.itemPrice, { fontSize: scaledXs, color: accent }]}>
+                      ₹{item.price}
+                    </Text>
+                    <MaterialCommunityIcons name="pencil-outline" size={10 * fontScale} color={Colors.textLight} />
+                  </View>
+                </TouchableOpacity>
+
+                {/* Right: stepper + line total */}
+                <View style={styles.stepper}>
+                  <TouchableOpacity
+                    style={[styles.stepBtn, { borderColor: item.qty === 1 ? Colors.error : Colors.border }]}
+                    onPress={() => onUpdateQty(item.id, -1)}
+                    activeOpacity={0.7}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <MaterialCommunityIcons
+                      name={item.qty === 1 ? 'trash-can-outline' : 'minus'}
+                      size={13 * fontScale}
+                      color={item.qty === 1 ? Colors.error : Colors.textSecondary}
+                    />
+                  </TouchableOpacity>
+
+                  <Text style={[styles.qtyNum, { fontSize: scaledMd }]}>{item.qty}</Text>
+
+                  <TouchableOpacity
+                    style={styles.stepBtn}
+                    onPress={() => onUpdateQty(item.id, 1)}
+                    activeOpacity={0.7}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <MaterialCommunityIcons name="plus" size={13 * fontScale} color={Colors.textSecondary} />
+                  </TouchableOpacity>
+
+                  <Text style={[styles.lineTotal, { fontSize: scaledXs }]}>
+                    ₹{(item.qty * item.price).toFixed(0)}
+                  </Text>
+                </View>
+              </View>
+            ))}
+          </ScrollView>
+
+          {/* ── Complete button ──────────────────────────────────── */}
           <TouchableOpacity
-            style={[
-              styles.completeButton,
-              cartItems.length === 0 && styles.completeButtonDisabled,
-              isCredit && styles.creditButton
-            ]}
+            style={[styles.completeBtn, { backgroundColor: accent }]}
             onPress={onCompleteSale}
-            disabled={cartItems.length === 0}
+            activeOpacity={0.85}
           >
             <MaterialCommunityIcons
-              name={isCredit ? "credit-card" : "cash"}
-              size={20}
-              color="#FFFFFF"
+              name={isCredit ? 'account-clock-outline' : 'check-circle-outline'}
+              size={17 * fontScale}
+              color={Colors.textInverse}
             />
-            <Text style={styles.completeButtonText}>
-              {isCredit ? 'Complete Credit Sale' : 'Complete Cash Sale'}
+            <Text style={[styles.completeBtnText, { fontSize: scaledMd }]}>
+              {isCredit ? 'Record Credit' : 'Complete Sale'}
+            </Text>
+            <View style={styles.completeBtnDivider} />
+            <Text style={[styles.completeBtnTotal, { fontSize: scaledMd }]}>
+              ₹{total.toFixed(0)}
             </Text>
           </TouchableOpacity>
         </>
@@ -115,109 +194,185 @@ const CartBar: React.FC<CartBarProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    borderTopWidth: 1,
-    padding: Spacing.md,
-    borderTopLeftRadius: BorderRadius.lg,
-    borderTopRightRadius: BorderRadius.lg,
+    backgroundColor: Colors.surface,
+    borderTopWidth: 2,
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.xl,
   },
-  cashContainer: {
-    backgroundColor: '#E8F5E9', // Light green
-    borderColor: '#C8E6C9',
+
+  /* ── Summary row ──────────────────────────────────────────────────── */
+  summaryRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.md,
   },
-  creditContainer: {
-    backgroundColor: '#FFEBEE', // Light red
-    borderColor: '#FFCDD2',
+
+  summaryLeft: {
+    flex: 1,
+    marginRight: Spacing.lg,
+    gap: Spacing.xs,
   },
-  header: {
-    marginBottom: Spacing.sm,
-  },
-  total: {
-    fontSize: Typography.fontSize.lg,
-    color: Colors.textSecondary,
-  },
-  totalAmount: {
-    color: Colors.primaryDark,
-    fontWeight: '600',
-  },
-  creditInfo: {
+
+  clearAndStatusRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.sm,
-    marginTop: Spacing.xs,
+    flexWrap: 'wrap',
   },
-  customerName: {
-    fontSize: Typography.fontSize.sm,
-    color: Colors.textSecondary,
-    fontWeight: '500',
-  },
-  cartItem: {
+
+  clearBtn: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.md,
+    backgroundColor: Colors.error + '12',
+    gap: 4,
+  },
+
+  clearBtnText: {
+    color: Colors.error,
+    fontWeight: Typography.fontWeight.medium,
+  },
+
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
+
+  customerChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 4,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 3,
+    borderRadius: BorderRadius.xl,
+    marginTop: 2,
+  },
+
+  customerChipText: {
+    color: Colors.stockLow,
+    fontWeight: Typography.fontWeight.semibold,
+  },
+
+  summaryLabel: {
+    color: Colors.textLight,
+    fontWeight: Typography.fontWeight.medium,
+  },
+
+  totalContainer: {
+    alignItems: 'flex-end',
+  },
+
+  totalLabel: {
+    color: Colors.textLight,
+    fontWeight: Typography.fontWeight.medium,
+    marginBottom: 2,
+  },
+
+  totalText: {
+    fontWeight: Typography.fontWeight.bold,
+  },
+
+  /* ── Item list ────────────────────────────────────────────────────── */
+  itemList: {
+    maxHeight: 160,
+    marginBottom: Spacing.md,
+  },
+
+  itemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: Spacing.sm,
+    gap: Spacing.md,
+  },
+
+  itemRowBorder: {
     borderBottomWidth: 1,
-    borderColor: 'rgba(0,0,0,0.1)',
+    borderColor: Colors.borderLight,
   },
-  cartItemInfo: {
+
+  itemInfo: {
     flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
   },
-  cartItemName: {
-    fontSize: Typography.fontSize.md,
+
+  itemName: {
     color: Colors.textPrimary,
+    fontWeight: Typography.fontWeight.medium,
   },
-  cartItemPrice: {
-    fontSize: Typography.fontSize.sm,
-    color: Colors.primary,
-  },
-  quantityControls: {
+
+  priceHint: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginLeft: Spacing.md,
+    gap: 3,
+    marginTop: 2,
   },
-  qtyButton: {
+
+  itemPrice: {
+    fontWeight: Typography.fontWeight.medium,
+  },
+
+  /* ── Stepper ──────────────────────────────────────────────────────── */
+  stepper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+
+  stepBtn: {
     width: 28,
     height: 28,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.8)',
-    borderRadius: BorderRadius.sm,
+    borderRadius: BorderRadius.md,
     borderWidth: 1,
     borderColor: Colors.border,
+    backgroundColor: Colors.background,
   },
-  qtyButtonText: {
-    fontSize: Typography.fontSize.lg,
+
+  qtyNum: {
     color: Colors.textPrimary,
-  },
-  quantity: {
-    fontSize: Typography.fontSize.md,
-    color: Colors.textPrimary,
-    marginHorizontal: Spacing.sm,
-    minWidth: 24,
+    fontWeight: Typography.fontWeight.bold,
+    minWidth: 22,
     textAlign: 'center',
   },
-  completeButton: {
+
+  lineTotal: {
+    color: Colors.textSecondary,
+    fontWeight: Typography.fontWeight.medium,
+    minWidth: 42,
+    textAlign: 'right',
+  },
+
+  /* ── Complete button ──────────────────────────────────────────────── */
+  completeBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Colors.primary,
-    borderRadius: BorderRadius.md,
-    padding: Spacing.md,
-    marginTop: Spacing.sm,
+    borderRadius: BorderRadius.lg,
+    height: 50,
     gap: Spacing.sm,
+    paddingHorizontal: Spacing.lg,
   },
-  creditButton: {
-    backgroundColor: Colors.error, // Red for credit sales
+
+  completeBtnText: {
+    color: Colors.textInverse,
+    fontWeight: Typography.fontWeight.semibold,
   },
-  completeButtonDisabled: {
-    backgroundColor: Colors.textLight,
+
+  completeBtnDivider: {
+    width: 1,
+    height: 18,
+    backgroundColor: 'rgba(255,255,255,0.3)',
   },
-  completeButtonText: {
-    fontSize: Typography.fontSize.md,
-    color: '#FFFFFF',
-    fontWeight: '500',
+
+  completeBtnTotal: {
+    color: Colors.textInverse,
+    fontWeight: Typography.fontWeight.bold,
   },
 });
 

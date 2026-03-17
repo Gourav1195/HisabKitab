@@ -39,7 +39,8 @@ const SellStack = () => {
       <Stack.Screen 
       name="CreditLedger" 
       component={CreditLedgerScreen} 
-      options={{ title: 'Credit Ledger' }}
+      options={{ title: 'Khata' }}
+      // options={{ title: 'Credit Ledger' }}
     />
     </Stack.Navigator>
   );
