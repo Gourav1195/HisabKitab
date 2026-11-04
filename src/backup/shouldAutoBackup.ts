@@ -1,6 +1,10 @@
 import { getProfile } from '../profile/getProfile';
+import { getVerifiedEmail } from './authSession';
 
+// One automatic backup per calendar day, only once the email is verified.
 export const shouldAutoBackup = () => {
+  if (!getVerifiedEmail()) return false;
+
   const profile = getProfile();
   if (!profile) return false;
 

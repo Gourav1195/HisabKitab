@@ -32,18 +32,25 @@ export const resetAndRestoreDB = async (payload: any) => {
   }
 };
 
+// Only insert columns that exist in this app version's table. Backups from an
+// older or newer version may have extra or missing columns.
+const tableColumns = (db: any, table: string): Set<string> => {
+  const res = db.execute(`PRAGMA table_info(${table})`);
+  const rows: any[] = res.rows?._array ?? [];
+  return new Set(rows.map(r => r.name));
+};
+
 const insertMany = (db: any, table: string, rows: any[]) => {
-  if (!rows.length) return;
+  if (!Array.isArray(rows) || !rows.length) return;
 
-  const keys = Object.keys(rows[0]);
+  const known = tableColumns(db, table);
+  const keys = Object.keys(rows[0]).filter(k => known.has(k));
+  if (!keys.length) return;
+
   const placeholders = keys.map(() => '?').join(',');
-
-  const sql = `
-    INSERT INTO ${table} (${keys.join(',')})
-    VALUES (${placeholders})
-  `;
+  const sql = `INSERT INTO ${table} (${keys.join(',')}) VALUES (${placeholders})`;
 
   rows.forEach(row => {
-    db.execute(sql, keys.map(k => row[k]));
+    db.execute(sql, keys.map(k => row[k] ?? null));
   });
 };

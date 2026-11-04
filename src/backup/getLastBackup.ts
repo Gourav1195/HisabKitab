@@ -1,14 +1,13 @@
-import { getProfile } from '../profile/getProfile';
-import { BACKUP_API_URL } from '@env';
+import { authedFetch, getVerifiedEmail } from './authSession';
 
-export const getLastBackup = async () => {
-  const profile = getProfile();
-  if (!profile?.email) return null;
-
-  const res = await fetch(
-    `${BACKUP_API_URL}/backup/last?email=${encodeURIComponent(profile.email)}`);
-
-  if (!res.ok) return null;
-
-  return res.json();
+export const getLastBackup = async (): Promise<{
+  lastBackupAt: string | null;
+  type: 'AUTO' | 'MANUAL' | null;
+} | null> => {
+  if (!getVerifiedEmail()) return null;
+  try {
+    return await authedFetch('/backup/last');
+  } catch {
+    return null;
+  }
 };

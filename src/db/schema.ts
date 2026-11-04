@@ -95,3 +95,14 @@ export const CREATE_BACKUP_TABLE = `
   type text NOT NULL CHECK (type IN ('AUTO', 'MANUAL'))
 );
 `;  
+// Verified-email session for cloud backup. Not included in backup payloads.
+export const CREATE_AUTH_SESSION_TABLE = `
+  CREATE TABLE IF NOT EXISTS auth_session (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    email TEXT NOT NULL,
+    access_token TEXT NOT NULL,
+    refresh_token TEXT NOT NULL,
+    expires_at INTEGER NOT NULL      -- unix seconds
+  );
+`;
+

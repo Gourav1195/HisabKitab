@@ -1,31 +1,125 @@
-import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  TextInput,
+  Alert,
+  ScrollView,
+} from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { Colors } from '../../theme/Colors';
-import { Alert } from 'react-native';
-import { triggerBackup } from '../../backup/backupService';
+import { triggerBackup, deleteCloudBackups } from '../../backup/backupService';
 import { getLastBackup } from '../../backup/getLastBackup';
-import { restoreBackupByEmail } from '../../backup/restoreService';
+import { restoreLatestBackup } from '../../backup/restoreService';
+import { getVerifiedEmail, sendCode, verifyCode, signOut } from '../../backup/authSession';
+import { getProfile } from '../../profile/getProfile';
+
+type LastBackup = { lastBackupAt: string | null; type: 'AUTO' | 'MANUAL' | null } | null;
 
 const BackupScreen = () => {
-  const [loading, setLoading] = React.useState(false);
-  const [lastBackup, setLastBackup] = React.useState<{
-    lastBackupAt: string | null;
-    type: 'AUTO' | 'MANUAL' | null;
-  } | null>(null);
-  
+  const [verifiedEmail, setVerifiedEmail] = useState<string | null>(getVerifiedEmail());
+  const [emailInput, setEmailInput] = useState<string>(getProfile()?.email ?? '');
+  const [code, setCode] = useState('');
+  const [codeSent, setCodeSent] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [lastBackup, setLastBackup] = useState<LastBackup>(null);
+
+  const refreshLast = () => getLastBackup().then(setLastBackup);
+
+  // A failed request can sign the user out (expired session); keep the UI in sync.
+  const syncVerified = () => setVerifiedEmail(getVerifiedEmail());
+
   useEffect(() => {
-    getLastBackup().then(setLastBackup);
-  }, []);
+    if (verifiedEmail) refreshLast().finally(syncVerified);
+  }, [verifiedEmail]);
+
+  const onSendCode = async () => {
+    try {
+      setBusy(true);
+      await sendCode(emailInput);
+      setCodeSent(true);
+      Alert.alert('Code sent', `Check ${emailInput.trim()} for your code.`);
+    } catch (e: any) {
+      Alert.alert('Could not send code', e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const onVerify = async () => {
+    try {
+      setBusy(true);
+      const email = await verifyCode(emailInput, code);
+      setCode('');
+      setCodeSent(false);
+      setVerifiedEmail(email);
+    } catch (e: any) {
+      Alert.alert('Verification failed', e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (!verifiedEmail) {
+    return (
+      <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
+        <View style={styles.card}>
+          <MaterialCommunityIcons name="email-check-outline" size={32} color={Colors.primary} />
+          <Text style={styles.title}>Verify your email</Text>
+          <Text style={styles.subtitle}>
+            Backups are linked to your email. We send a one-time code so only you can restore your data.
+          </Text>
+
+          <TextInput
+            style={styles.input}
+            value={emailInput}
+            onChangeText={setEmailInput}
+            placeholder="you@example.com"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+            editable={!busy}
+          />
+
+          {codeSent && (
+            <TextInput
+              style={styles.input}
+              value={code}
+              onChangeText={t => setCode(t.replace(/\D/g, ''))}
+              placeholder="Code from email"
+              keyboardType="number-pad"
+              maxLength={10}
+              editable={!busy}
+            />
+          )}
+
+          <TouchableOpacity
+            style={[styles.backupBtn, busy && { opacity: 0.6 }]}
+            disabled={busy}
+            onPress={codeSent ? onVerify : onSendCode}
+          >
+            <Text style={styles.backupText}>
+              {busy ? 'Please wait…' : codeSent ? 'Verify' : 'Send code'}
+            </Text>
+          </TouchableOpacity>
+
+          {codeSent && (
+            <TouchableOpacity disabled={busy} onPress={onSendCode}>
+              <Text style={styles.link}>Resend code</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </ScrollView>
+    );
+  }
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container}>
       <View style={styles.card}>
-        <MaterialCommunityIcons
-          name="cloud-upload-outline"
-          size={32}
-          color={Colors.primary}
-        />
+        <MaterialCommunityIcons name="cloud-upload-outline" size={32} color={Colors.primary} />
 
         <Text style={styles.title}>Backup & Restore</Text>
 
@@ -34,22 +128,19 @@ const BackupScreen = () => {
         </Text>
 
         <TouchableOpacity
-          style={[
-            styles.backupBtn,
-            loading && { opacity: 0.6 },
-          ]}
+          style={[styles.backupBtn, loading && { opacity: 0.6 }]}
           disabled={loading}
           onPress={async () => {
             try {
               setLoading(true);
               await triggerBackup('MANUAL');
-              const info = await getLastBackup();
-              setLastBackup(info);
+              await refreshLast();
               Alert.alert('Backup complete', 'Your data is safely backed up.');
             } catch (e: any) {
               Alert.alert('Backup failed', e.message);
             } finally {
               setLoading(false);
+              syncVerified();
             }
           }}
         >
@@ -58,52 +149,87 @@ const BackupScreen = () => {
             size={18}
             color={Colors.surface}
           />
-          <Text style={styles.backupText}>
-            {loading ? 'Backing up…' : 'Backup now'}
-          </Text>
+          <Text style={styles.backupText}>{loading ? 'Backing up…' : 'Backup now'}</Text>
         </TouchableOpacity>
 
-        <Text style={styles.muted}>
-        Automatic daily backup runs when you open the app.
-        </Text>
+        <Text style={styles.muted}>Automatic daily backup runs when you open the app.</Text>
+        <Text style={styles.muted}>Signed in as {verifiedEmail}</Text>
       </View>
+
       {lastBackup?.lastBackupAt && (
-      <Text style={styles.lastBackup}>
-        Last backup: {new Date(lastBackup.lastBackupAt).toLocaleString()}
-        {lastBackup.type === 'MANUAL' ? ' (manual)' : ''}
-      </Text>
-    )}
+        <Text style={styles.lastBackup}>
+          Last backup: {new Date(lastBackup.lastBackupAt).toLocaleString('en-IN')}
+          {lastBackup.type === 'MANUAL' ? ' (manual)' : ''}
+        </Text>
+      )}
 
+      <TouchableOpacity
+        style={styles.restoreBtn}
+        onPress={() => {
+          Alert.alert('Restore backup', 'This will replace all current data on this device.', [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Restore',
+              style: 'destructive',
+              onPress: async () => {
+                try {
+                  await restoreLatestBackup();
+                  Alert.alert('Restore complete', 'Restart the app.');
+                } catch (e: any) {
+                  Alert.alert('Restore failed', e.message);
+                } finally {
+                  syncVerified();
+                }
+              },
+            },
+          ]);
+        }}
+      >
+        <MaterialCommunityIcons name="cloud-download" size={18} />
+        <Text>Restore backup</Text>
+      </TouchableOpacity>
 
-<TouchableOpacity
-  style={[styles.restoreBtn]}
-  onPress={() => {
-    Alert.alert(
-      'Restore backup',
-      'This will replace all current data on this device.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Restore',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await restoreBackupByEmail();
-              Alert.alert('Restore complete', 'Restart the app.');
-            } catch (e: any) {
-              Alert.alert('Restore failed', e.message);
-            }
-          },
-        },
-      ]
-    );
-  }}
->
-  <MaterialCommunityIcons name="cloud-download" size={18} />
-  <Text>Restore backup</Text>
-</TouchableOpacity>
+      <TouchableOpacity
+        style={styles.restoreBtn}
+        onPress={() => {
+          Alert.alert(
+            'Delete cloud backups',
+            'This permanently deletes every backup stored online for this email. Data on this phone is not affected.',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              {
+                text: 'Delete',
+                style: 'destructive',
+                onPress: async () => {
+                  try {
+                    await deleteCloudBackups();
+                    setLastBackup(null);
+                    Alert.alert('Deleted', 'Your cloud backups have been deleted.');
+                  } catch (e: any) {
+                    Alert.alert('Delete failed', e.message);
+                  } finally {
+                    syncVerified();
+                  }
+                },
+              },
+            ],
+          );
+        }}
+      >
+        <MaterialCommunityIcons name="delete-outline" size={18} color={Colors.stockOut} />
+        <Text style={{ color: Colors.stockOut }}>Delete cloud backups</Text>
+      </TouchableOpacity>
 
-    </View>
+      <TouchableOpacity
+        onPress={() => {
+          signOut();
+          setLastBackup(null);
+          setVerifiedEmail(null);
+        }}
+      >
+        <Text style={styles.link}>Use a different email</Text>
+      </TouchableOpacity>
+    </ScrollView>
   );
 };
 
@@ -160,8 +286,25 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.textSecondary,
   },
+  input: {
+    alignSelf: 'stretch',
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 15,
+    color: Colors.textPrimary,
+    marginBottom: 12,
+  },
+  link: {
+    marginTop: 16,
+    fontSize: 13,
+    color: Colors.primary,
+    textAlign: 'center',
+  },
   restoreBtn: {
-    marginTop: 30,
+    marginTop: 16,
     flexDirection: 'row', 
     alignItems: 'center',
     gap: 8,

@@ -1,5 +1,5 @@
 //src/db/index.ts
-import { CREATE_ITEMS_TABLE, CREATE_SALES_TABLE, CREATE_SALE_ITEMS_TABLE, CREATE_PROFILE_TABLE, CREATE_CUSTOMER_TABLE, CREATE_LEDGER_TABLE, CREATE_STOCK_MOVEMENTS_TABLE  } from './schema';
+import { CREATE_ITEMS_TABLE, CREATE_SALES_TABLE, CREATE_SALE_ITEMS_TABLE, CREATE_PROFILE_TABLE, CREATE_CUSTOMER_TABLE, CREATE_LEDGER_TABLE, CREATE_STOCK_MOVEMENTS_TABLE, CREATE_AUTH_SESSION_TABLE } from './schema';
 import { open } from 'react-native-quick-sqlite';
 import { initProfile } from './initProfile';
 
@@ -24,6 +24,7 @@ export const initDB = () => {
   database.execute(CREATE_CUSTOMER_TABLE);
   database.execute(CREATE_LEDGER_TABLE);
   database.execute(CREATE_STOCK_MOVEMENTS_TABLE);
+  database.execute(CREATE_AUTH_SESSION_TABLE);
 
   initProfile();
 

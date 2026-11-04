@@ -1,15 +1,10 @@
 // src/screens/ProScreen.tsx
 import React from 'react';
-import { View, Text, StyleSheet, Button, Alert } from 'react-native';
-import { getDB } from '../db';
+import { View, Text, StyleSheet } from 'react-native';
 
 const ProScreen = () => {
-  const upgradeFake = () => {
-    const db = getDB();
-    db.execute(`UPDATE profile SET is_pro = 1`);
-    Alert.alert('Pro activated', 'You are now a Pro user');
-  };
-
+  // Paid plans must be sold through Google Play Billing. Until that is wired up,
+  // this screen only announces Pro; it must never unlock it for free.
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Upgrade to Pro</Text>
@@ -21,9 +16,8 @@ const ProScreen = () => {
         <Text style={styles.item}>✓ Backup (coming)</Text>
       </View>
 
-      <Text style={styles.price}>₹99 / year</Text>
-
-      <Button title="Upgrade now" onPress={upgradeFake} />
+      <Text style={styles.price}>Coming soon</Text>
+      <Text style={styles.note}>All current features are free.</Text>
     </View>
   );
 };
@@ -41,4 +35,5 @@ const styles = StyleSheet.create({
   },
   item: { fontSize: 15 },
   price: { fontSize: 20, fontWeight: '600', marginTop: 8 },
+  note: { fontSize: 14, color: '#4B5563' },
 });
