@@ -82,6 +82,21 @@ You've successfully run and modified your React Native App. :partying_face:
 - If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
 - If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
 
+# Releasing to the Play Store
+
+1. Use the **same upload key** you used for earlier uploads (Play rejects a different key unless you request an upload-key reset in Play Console → App integrity). If this is the first upload, create one:
+   `keytool -genkeypair -v -storetype PKCS12 -keystore hisabkitab-upload.keystore -alias hisabkitab-upload -keyalg RSA -keysize 2048 -validity 10000`
+   Back it up somewhere safe and never commit it.
+2. Add to `~/.gradle/gradle.properties` (not the repo's file):
+   ```
+   HISABKITAB_UPLOAD_STORE_FILE=/absolute/path/to/hisabkitab-upload.keystore
+   HISABKITAB_UPLOAD_KEY_ALIAS=hisabkitab-upload
+   HISABKITAB_UPLOAD_STORE_PASSWORD=...
+   HISABKITAB_UPLOAD_KEY_PASSWORD=...
+   ```
+3. Raise `versionCode` in `android/app/build.gradle` above the last one in Play Console.
+4. Build: `cd android && ./gradlew bundleRelease` → upload `android/app/build/outputs/bundle/release/app-release.aab`.
+
 # Troubleshooting
 
 If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.

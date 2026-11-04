@@ -82,8 +82,9 @@ android {
         applicationId "com.gouravmodi.hisabkitab"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0.0"
+        // Must be higher than every versionCode already uploaded to Play Console.
+        versionCode 2
+        versionName "1.0.1"
     }
     signingConfigs {
         debug {
@@ -92,15 +93,29 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        // Upload key for Play Store builds. Keep the keystore and passwords out of git:
+        // put HISABKITAB_UPLOAD_* in ~/.gradle/gradle.properties (see README).
+        if (project.hasProperty('HISABKITAB_UPLOAD_STORE_FILE')) {
+            release {
+                storeFile file(HISABKITAB_UPLOAD_STORE_FILE)
+                storePassword HISABKITAB_UPLOAD_STORE_PASSWORD
+                keyAlias HISABKITAB_UPLOAD_KEY_ALIAS
+                keyPassword HISABKITAB_UPLOAD_KEY_PASSWORD
+            }
+        }
     }
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            // Play Store rejects debug-signed bundles; the debug fallback is only for local testing.
+            if (signingConfigs.findByName('release') != null) {
+                signingConfig signingConfigs.release
+            } else {
+                logger.warn("HISABKITAB_UPLOAD_* not set: release build is DEBUG-signed and cannot be uploaded to Play.")
+                signingConfig signingConfigs.debug
+            }
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
