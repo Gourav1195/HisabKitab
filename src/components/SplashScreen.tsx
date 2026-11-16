@@ -39,7 +39,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onDone }) => {
       </Animated.View>
 
       <Animated.Text style={[styles.appName, { opacity: textOpacity }]}>
-        HisabKitab
+        Pai Pai
       </Animated.Text>
 
       <Animated.Text style={[styles.tagline, { opacity: subOpacity }]}>

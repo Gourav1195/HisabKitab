@@ -34,7 +34,7 @@ const BottomTabs = () => {
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        headerTitle: 'HisabKitab',
+        headerTitle: 'Pai Pai',
         headerTitleAlign: 'center',
         tabBarActiveTintColor: '#007aff',
         tabBarInactiveTintColor: '#777',

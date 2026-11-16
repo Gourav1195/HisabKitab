@@ -98,7 +98,7 @@ export const exportItemsToCSV = async () => {
   ];
 
   const csvContent = csvRows.join('\n');
-  const filePath = `${RNFS.DownloadDirectoryPath}/hisabkitab_items_${Date.now()}.csv`;
+  const filePath = `${RNFS.DownloadDirectoryPath}/paipai_items_${Date.now()}.csv`;
 
   const exists = await RNFS.exists(filePath);
   if (exists) {
@@ -136,7 +136,7 @@ export const exportSalesCSV = async () => {
     ),
   ].join('\n');
 
-  const path = `${RNFS.DownloadDirectoryPath}/hisabkitab_sales_${Date.now()}.csv`;
+  const path = `${RNFS.DownloadDirectoryPath}/paipai_sales_${Date.now()}.csv`;
   await RNFS.writeFile(path, csv, 'utf8');
   return path;
 };
